@@ -1,0 +1,13 @@
+State,PDB,Method,Res_A,Group_first_author,Year,Journal,Ligand,Chains_ASU
+G12C,8AZX,X-ray,1.04,"Kim, D.",2023.0,Nature,GDP + Mg + BI-2865 (non-covalent pan-KRAS inhibitor),1
+G12C,8TVK,X-ray,1.04,"Deck, S.L.",2025.0,bioRxiv,GDP + Mg only — no inhibitor,1
+G12C,8B78,X-ray,1.11,"Kettle, J.G.",2023.0,J Med Chem,GDP + Mg + AZ covalent inhibitor (PUO),1
+G12C,9N44,X-ray,1.11,"Wang, J.",,To be published,"GDP + Mg + olomorasib (LY3537982, covalent)",1
+G12C,4LDJ,X-ray,1.15,"Hunter, J.C.",2014.0,Proc Natl Acad Sci U S A,GDP + Mg only — no inhibitor,1
+G12C,6OIM,X-ray,1.65,"Canon, J.",2019.0,Nature,"GDP + Mg + SOTORASIB (AMG 510, covalent) ★",1
+G12C,6USZ,X-ray,2.03,"Fell, J.B.",2020.0,J Med Chem,"GDP + Mg + ADAGRASIB (MRTX849, covalent) ★",1
+WT,9IAY,X-ray,0.953,"Broker, J.",2025.0,J Med Chem,"GDP + Mg (aminobenzothiophene fragment, non-covalent tool cmpd)",1
+WT,9IAW,X-ray,0.997,"Broker, J.",2025.0,J Med Chem,"GDP + Mg (aminobenzothiophene fragment, non-covalent tool cmpd)",1
+WT,6P0Z,X-ray,1.011,"Dharmaiah, S.",2019.0,Sci Rep,GDP + Mg only (N-acetylated KRAS) — no inhibitor,2
+WT,8AZV,X-ray,1.05,"Kim, D.",2023.0,Nature,GDP + Mg + BI-2865 (non-covalent pan-KRAS inhibitor),1
+WT,8FMI,X-ray,1.12,"Brenner, R.J.",2023.0,Biochemistry,GDP + Mg only — no inhibitor,1

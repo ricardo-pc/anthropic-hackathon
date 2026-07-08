@@ -1,0 +1,13 @@
+State,PDB,Method,Res_A,Depositing_first_author,Year,Journal,Inhibitor_or_apo,Chains_ASU
+WT (T790/L858),8A27,X-ray,1.07,"Obst-Sander, U.",2022,J Med Chem,"Genentech isoindolinone–pyrroloimidazole inhibitor (cmpd, Obst-Sander 2022)",1
+WT (T790/L858),8A2A,X-ray,1.43,"Obst-Sander, U.",2022,J Med Chem,"Genentech isoindolinone–pyrroloimidazole inhibitor (cmpd, Obst-Sander 2022)",1
+WT (T790/L858),3POZ,X-ray,1.5,"Aertgeerts, K.",2011,J Biological Chem,TAK-285 (reversible),1
+L858R (T790/R858),8A2D,X-ray,1.11,"Obst-Sander, U.",2022,J Med Chem,Genentech indazole-spiro inhibitor (Obst-Sander 2022),1
+L858R (T790/R858),8A2B,X-ray,1.69,"Obst-Sander, U.",2022,J Med Chem,Genentech isoindolinone–pyrroloimidazole inhibitor (Obst-Sander 2022),1
+L858R (T790/R858),2ITV,X-ray,2.47,"Yun, C.-H.",2007,Cancer Cell,AMP-PNP only (nucleotide analog; no inhibitor),1
+T790M single (M790/L858),4I24,X-ray,1.8,"Gajiwala, K.S.",2013,Structure,"Dacomitinib (PF-00299804, irreversible)",2
+T790M single (M790/L858),7JXQ,X-ray,1.83,"To, C.",2022,Nat Cancer,"AMP-PNP + JBJ allosteric inhibitor (isoindolinone, To/Beyett 2022)",4
+T790M single (M790/L858),7JXP,X-ray,2.16,"Beyett, T.S.",2022,Nat Commun,AMP-PNP + osimertinib + JBJ allosteric inhibitor,6
+L858R+T790M double (M790/R858),5UG9,X-ray,1.33,"Planken, S.",2017,J Med Chem,Pfizer aminopurine covalent inhibitor (Planken 2017),1
+L858R+T790M double (M790/R858),5UG8,X-ray,1.46,"Planken, S.",2017,J Med Chem,Pfizer aminopurine covalent inhibitor (Planken 2017),1
+L858R+T790M double (M790/R858),5UGC,X-ray,1.58,"Planken, S.",2017,J Med Chem,Pfizer aminopurine covalent inhibitor (Planken 2017),1
