@@ -1,0 +1,6 @@
+Landmark,Author_resnum,Notes,Across_3POZ/8A2B/4I24/5UGC
+Hinge backbone,790-797,gatekeeper(790)-Q791-L792-M793-P794-F795-G796-C797; M793 is the drug/ATP H-bond anchor. Use 791-797 to exclude the mutated gatekeeper.,identical
+HRD catalytic loop,835-837,His835-Arg836-Asp837; Asp837 is the catalytic aspartate,identical
+DFG motif,855-857,Asp855-Phe856-Gly857; Asp855 coordinates Mg2+,identical
+beta3 Lys,745,K745 (in A-I-K-E-L),identical
+aC Glu,762,E762 (in L-D-E-A-Y); K745-E762 salt bridge,identical

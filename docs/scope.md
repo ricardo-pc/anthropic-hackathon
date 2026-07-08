@@ -82,9 +82,10 @@ Implemented in `src/structure_prep.py`, verified by `src/verify_prep.py`. Prepar
 - [x] Source clinical-resistance citations for the three known-answer facts — done, see `known_answers.md` (Claude Science `02/`).
 - [ ] Confirm covalent-docking plan for KRAS G12C (Block E).
 - [ ] PhD-friend spot-check of structure-prep + conformational-state matching.
-- [ ] **Fix alignment landmark (§6.1) before the full sweep** — pending exact residue numbers from Claude Science follow-up.
+- [x] **Fix alignment landmark (§6.1)** — done Jul 8, receptors regenerated + re-verified.
 - [ ] Watch sotorasib-vs-4LDJ score in Wed known-answer validation — built-in test of the KRAS induced-fit risk (§6.3).
 - [ ] Thursday stats: compute the T790M four-corner decomposition (§6.2), not just the headline WT-vs-double delta.
+- [ ] **Thursday stats — heed the DiffDock delta caveats in `docs/docking_score_notes.md`** (run-to-run noise floor first; identical model/config across all structures; rescore rank1 with gnina; confidence ≠ affinity).
 
 ---
 
@@ -92,8 +93,8 @@ Implemented in `src/structure_prep.py`, verified by `src/verify_prep.py`. Prepar
 
 Full response: `claude-science/03/structure_audit_and_4_questions.md` + `structure_audit.csv`. Independently pulled all 7 structures via the PDB connector and read genotypes from deposited sequence (not titles) — a second, connector-verified check on top of §2's survey.
 
-### 6.1 — Alignment circularity risk (fix before the full sweep)
-The pocket-local fix (§4) is confirmed correct in principle, but a **radius-based** residue selection (CA within 12 Å of pocket center) risks including residue 790 — the T790M gatekeeper itself — in the set used to *align* the structures. That's circular: partly using the mutation to measure the mutation. **Fix:** align on a fixed landmark instead of a radius — hinge backbone (~790–797), catalytic HRD/DFG motifs, K745(β3)–E762(αC) salt bridge (kinase-biology invariants, unaffected by the mutations in scope). Treat position 790's sidechain as *measured*, never *fitting*. Exact residue numbers for these landmarks, verified against our specific PDB entries, are a pending Claude Science follow-up before `structure_prep.py` is updated and the receptors regenerated.
+### 6.1 — Alignment circularity risk — FIXED (Jul 8)
+The pocket-local fix (§4) was confirmed correct in principle, but a **radius-based** residue selection (CA within 12 Å of pocket center) risked including residue 790 — the T790M gatekeeper itself — in the set used to *align* the structures: circular. **Fixed:** `structure_prep.py` now fits on fixed mutation-independent landmarks — EGFR: K745, E762, hinge **791–797** (gatekeeper 790 excluded), HRD 835–837, DFG 855–857; KRAS: rigid core minus residue 12 and switch regions 30–38 / 60–76. Landmark numbering verified identical across all four EGFR entries via Claude Science (zero insertion codes; 5UGC's 790 carries two altLocs — another reason to exclude it). Receptors regenerated + re-verified. Pocket-readout RMSD (post-landmark-fit) ≤1.75 Å for every structure, so the shared box is valid across all states. Tested dropping HRD/DFG from the anchor set — lowered the fit number but didn't improve the pocket readout, so the fuller set is kept. See `data/structures/README.md`.
 
 ### 6.2 — T790M four-corner design (Thursday stats note, not a blocker)
 5UGC (double mutant) remains the correct "resistant tumor" representation. Since all four EGFR states are already locked (WT/3POZ, L858R/8A2B, T790M-alone/4I24, double/5UGC), the stats layer should compute **both** (double − WT) *and* (double − L858R) *and* (T790M-alone − WT) — the latter two decompose how much of the resistant-tumor delta is T790M acting alone vs. T790M's effect on an already-L858R-active kinase. No new structures needed.

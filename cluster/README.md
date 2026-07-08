@@ -19,8 +19,8 @@ Claude Code cannot reach this cluster directly (no loaded SSH identity in its sh
 ## Proof-of-wiring test (today's Block E bar) — PASSED Jul 8
 One drug × one structure end-to-end. See [`test_one_pair.sh`](test_one_pair.sh) for the exact commands (erlotinib vs. wild-type EGFR 3POZ). Result: 10 poses, best = rank1 at confidence **-0.25** (DiffDock's own descending sort — verified against source, see below), landing in DiffDock's documented "moderate confidence" band. Working end-to-end.
 
-## DiffDock confidence score — sign convention (read this before interpreting ANY result)
-Confidence values are typically **negative**. Per DiffDock's own FAQ: `c > 0` high confidence, `-1.5 < c < 0` moderate, `c < -1.5` low. **Higher (less negative) = better.** Output filenames like `rank1_confidence-0.25.sdf` — that `-` is a minus sign on the number, not a separator; easy to misread as "0.25" at a glance. Verified against DiffDock's actual sort code (`inference.py`): `np.argsort(confidence)[::-1]` then `rank1 = confidence[0]` of that descending-sorted array, i.e. rank1 *is* the highest (best) confidence, by construction. Read the sign carefully every time — this determines whether the whole four-bucket classification (robust/improved/weakened/non-binder) points the right direction.
+## DiffDock confidence score — sign convention
+Confidence values are typically **negative**; higher (less negative) = better (`c>0` high, `−1.5<c<0` moderate, `c<−1.5` low). rank1 = best by construction. `rank1_confidence-0.25.sdf` means confidence −0.25 (the `-` is the sign). Verified against DiffDock source. **Full interpretation + the five WT-vs-mutant delta caveats that govern the stats layer are in [`../docs/docking_score_notes.md`](../docs/docking_score_notes.md) — read that before computing any delta.**
 
 ## Known environment.yml bug (already patched into setup_diffdock_env.sh)
 DiffDock's `environment.yml` has THREE separate `pip:` blocks under `dependencies:` — conda only honors the *last* one, so `conda env create` silently installs gradio but drops torch/e3nn/torch-geometric (block 1) and openfold (block 2). `setup_diffdock_env.sh` now detects and re-installs both dropped blocks automatically.
@@ -31,6 +31,8 @@ DiffDock's `environment.yml` has THREE separate `pip:` blocks under `dependencie
 [`build_sweep_csv.py`](build_sweep_csv.py) + [`full_sweep.sbatch`](full_sweep.sbatch): builds one CSV with all 27 drugs × 7 structures (189 rows: `complex_name, protein_path, ligand_description`) and runs DiffDock's native `--protein_ligand_csv` batch mode — one process launch for all 189 pairs, not 189 separate ones, so the ESM model loads once instead of 189 times. Confirmed via DiffDock's README that the CSV format supports multiple distinct proteins per file, not just multiple ligands against one protein.
 
 Push to gandalf: `rsync -avz cluster/ gandalf.berkeley.edu:~/hackathon/cluster/`, then `sbatch full_sweep.sbatch` from the gandalf terminal — runs unattended, no terminal needs to stay open. Output lands in `~/hackathon/results/full_sweep/<drug>__<pdb>/`.
+
+**This is a single-pass sweep — a Wednesday known-answer *direction* check** (does erlotinib's score drop on T790M, does osimertinib hold, etc.). It is NOT the statistically rigorous version. DiffDock is stochastic and its 10 poses are one draw, not independent estimates (see `docs/docking_score_notes.md` caveats 3–4), so Thursday's stats layer must **re-run each pair N≥5–10 times** to establish the run-to-run noise floor before any WT-vs-mutant delta is trusted. Replicates require editing a copied YAML, not a CLI flag (the YAML overrides CLI — caveat 5).
 
 (An earlier naive per-pair-subprocess version of this script was replaced once the CSV batch mode was confirmed to exist — no reason to pay the reload cost 189 times when one call does it.)
 

@@ -57,6 +57,27 @@ TARGET_REF = {
     "KRAS": dict(align_to="8FMI", pocket_from="6OIM"),  # WT frame, switch-II pocket from sotorasib
 }
 
+# --- Alignment landmarks: mutation-INDEPENDENT residues to superpose on ---
+# Rationale (Claude Science structural audit, docs/scope.md §6.1): a radius-based pocket
+# selection can include the mutated residue in the set used to *align* the structures —
+# circular, since we'd partly be fitting on the very thing we're trying to measure. Instead
+# fit on fixed anatomical landmarks that don't move with these mutations, and treat the
+# mutated sidechain as a MEASURED quantity, never a fitting one.
+#
+# EGFR kinase invariants, verified against the deposited numbering of 3POZ/8A2B/4I24/5UGC
+# (identical across all four; zero insertion codes). Residue 790 (the T790M gatekeeper) is
+# DELIBERATELY EXCLUDED — it's the mutation itself, and 5UGC models it in two altLocs.
+EGFR_LANDMARKS = frozenset(
+    [745, 762]                       # β3 Lys – αC Glu salt bridge
+    + list(range(791, 798))          # hinge backbone 791–797 (790 gatekeeper excluded)
+    + [835, 836, 837]                # catalytic HRD motif
+    + [855, 856, 857]                # DFG motif
+)
+# KRAS is a small rigid GTPase (no hinge-breathing), so it already aligns tightly. Fit on the
+# rigid core but EXCLUDE the mutation (12) and the mobile/induced-fit switch regions
+# (switch-I 30–38, switch-II 60–76) so those are measured, not fitted.
+KRAS_ALIGN_EXCLUDE = frozenset({12} | set(range(30, 39)) | set(range(60, 77)))
+
 
 class ProtomerSelect(Select):
     """Keep one chain's protein residues + allowlisted cofactors; drop drug, water, additives."""
@@ -120,14 +141,37 @@ def pocket_resnums(struct, chain_id, center, radius=12.0):
     return nums
 
 
-def matched_ca(ref_struct, mob_struct, ref_chain, mob_chain, restrict=None):
-    """CA atom pairs sharing the same residue number. If `restrict` given, only those resnums."""
+def matched_ca(ref_struct, mob_struct, ref_chain, mob_chain, restrict=None, exclude=None):
+    """CA atom pairs sharing the same residue number.
+    `restrict`: keep only these resnums. `exclude`: drop these resnums."""
     ref_ca = ca_by_resnum(ref_struct, ref_chain)
     mob_ca = ca_by_resnum(mob_struct, mob_chain)
     common = sorted(set(ref_ca) & set(mob_ca))
     if restrict is not None:
         common = [i for i in common if i in restrict]
+    if exclude is not None:
+        common = [i for i in common if i not in exclude]
     return [ref_ca[i] for i in common], [mob_ca[i] for i in common], common
+
+
+def ca_rmsd_over(ref_struct, mob_struct, ref_chain, mob_chain, resnums):
+    """CA RMSD over specific residues in the CURRENT coordinates (no re-fit).
+    Used as a pocket-agreement READOUT after superposing on the landmark set —
+    i.e. 'given a mutation-independent fit, how well does the pocket line up?'"""
+    ref_ca = ca_by_resnum(ref_struct, ref_chain)
+    mob_ca = ca_by_resnum(mob_struct, mob_chain)
+    common = [i for i in resnums if i in ref_ca and i in mob_ca]
+    if not common:
+        return None, 0
+    d2 = [np.sum((ref_ca[i].coord - mob_ca[i].coord) ** 2) for i in common]
+    return float(np.sqrt(np.mean(d2))), len(common)
+
+
+def alignment_resnums(target, ref_struct, mob_struct, ref_chain, mob_chain):
+    """The mutation-independent resnums to fit on, per target."""
+    if target == "EGFR":
+        return matched_ca(ref_struct, mob_struct, ref_chain, mob_chain, restrict=EGFR_LANDMARKS)
+    return matched_ca(ref_struct, mob_struct, ref_chain, mob_chain, exclude=KRAS_ALIGN_EXCLUDE)
 
 
 def main():
@@ -138,17 +182,8 @@ def main():
     # Load all raw structures once.
     raw = {pdb: parser.get_structure(pdb, f"{RAW}/{pdb}.pdb") for pdb in STRUCTS}
 
-    # Pocket center in each reference's OWN frame (before any alignment), to pick pocket residues.
-    ref_pocket_center = {}
-    for target, ref in TARGET_REF.items():
-        src = ref["pocket_from"]
-        ref_pocket_center[target] = ligand_centroid(raw[src], STRUCTS[src]["chain"], STRUCTS[src]["ref_ligand"])
-    # For KRAS the pocket ligand (6OIM) isn't the align reference (8FMI); carry its center via the
-    # align-reference frame by first aligning globally — handled below. For picking pocket residues on
-    # the align-reference itself, translate: use the pocket_from center directly on 8FMI only after we
-    # know they're already in a near-common frame (KRAS aligns at 0.2 Å, so centers are ~equivalent).
-
-    # --- Superpose every structure onto its target's reference frame (POCKET-LOCAL) ---
+    # --- Superpose every structure onto its target's reference frame, fitting on
+    #     mutation-INDEPENDENT landmarks (EGFR kinase invariants / KRAS rigid core). ---
     transforms = {}
     for pdb, cfg in STRUCTS.items():
         target = cfg["target"]
@@ -156,22 +191,40 @@ def main():
         if pdb == ref_pdb:
             transforms[pdb] = "reference"
             continue
-        # pocket residues defined on the REFERENCE structure, near the pocket center
-        pkt_center = ref_pocket_center[target]
-        pkt_nums = pocket_resnums(raw[ref_pdb], STRUCTS[ref_pdb]["chain"], pkt_center, radius=12.0)
 
-        # global fit (all CA) — diagnostic only
+        # global fit (all CA) — reported as a diagnostic only, never used for the transform
         ga_ref, ga_mob, _ = matched_ca(raw[ref_pdb], raw[pdb], STRUCTS[ref_pdb]["chain"], cfg["chain"])
         gsup = Superimposer(); gsup.set_atoms(ga_ref, ga_mob); global_rms = gsup.rms
 
-        # pocket-local fit (used for the actual transform)
-        pa_ref, pa_mob, pcommon = matched_ca(
-            raw[ref_pdb], raw[pdb], STRUCTS[ref_pdb]["chain"], cfg["chain"], restrict=pkt_nums
+        # landmark fit (the actual transform) — mutation-independent anchors only
+        la_ref, la_mob, lcommon = alignment_resnums(
+            target, raw[ref_pdb], raw[pdb], STRUCTS[ref_pdb]["chain"], cfg["chain"]
         )
-        sup = Superimposer(); sup.set_atoms(pa_ref, pa_mob)
+        sup = Superimposer(); sup.set_atoms(la_ref, la_mob)
         sup.apply(raw[pdb].get_atoms())  # move whole mobile structure into ref frame
-        transforms[pdb] = dict(n_pocket=len(pcommon), rmsd_pocket=round(sup.rms, 3), rmsd_global_allCA=round(global_rms, 3))
-        print(f"  aligned {pdb} -> {ref_pdb}: pocket {len(pcommon)} CA, POCKET RMSD {sup.rms:.3f} Å  (global all-CA {global_rms:.3f} Å)")
+        transforms[pdb] = dict(
+            fit="EGFR_landmarks" if target == "EGFR" else "KRAS_core",
+            n_landmark_ca=len(lcommon),
+            rmsd_landmark=round(sup.rms, 3),
+            rmsd_global_allCA=round(global_rms, 3),
+        )
+        print(f"  aligned {pdb} -> {ref_pdb}: {len(lcommon)} landmark CA, LANDMARK RMSD {sup.rms:.3f} Å  (global all-CA {global_rms:.3f} Å)")
+
+    # --- Pocket-agreement READOUT (after landmark fit; not used for fitting) ---
+    # 'Given a mutation-independent alignment, how well does the pocket itself line up?'
+    # Pocket residues picked on the reference (now in the aligned frame) near the pocket ligand.
+    for target, ref in TARGET_REF.items():
+        ref_pdb = ref["align_to"]
+        center = ligand_centroid(raw[ref["pocket_from"]], STRUCTS[ref["pocket_from"]]["chain"],
+                                 STRUCTS[ref["pocket_from"]]["ref_ligand"])  # aligned frame
+        pkt_nums = pocket_resnums(raw[ref_pdb], STRUCTS[ref_pdb]["chain"], center, radius=12.0)
+        for pdb, cfg in STRUCTS.items():
+            if cfg["target"] != target or pdb == ref_pdb:
+                continue
+            rms, n = ca_rmsd_over(raw[ref_pdb], raw[pdb], STRUCTS[ref_pdb]["chain"], cfg["chain"], pkt_nums)
+            transforms[pdb]["rmsd_pocket_readout"] = round(rms, 3) if rms is not None else None
+            transforms[pdb]["n_pocket_readout"] = n
+            print(f"  pocket readout {pdb}: {rms:.3f} Å over {n} pocket CA (post-landmark-fit)")
 
     # --- Clean each receptor (now all in a common frame) ---
     # Output = single protomer, protein + kept cofactors, drug/water/additives removed.

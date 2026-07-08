@@ -46,30 +46,45 @@
   "transforms": {
     "3POZ": "reference",
     "8A2B": {
-      "n_pocket": 44,
-      "rmsd_pocket": 0.88,
-      "rmsd_global_allCA": 3.145
+      "fit": "EGFR_landmarks",
+      "n_landmark_ca": 15,
+      "rmsd_landmark": 0.593,
+      "rmsd_global_allCA": 3.145,
+      "rmsd_pocket_readout": 1.098,
+      "n_pocket_readout": 44
     },
     "4I24": {
-      "n_pocket": 44,
-      "rmsd_pocket": 0.68,
-      "rmsd_global_allCA": 5.053
+      "fit": "EGFR_landmarks",
+      "n_landmark_ca": 15,
+      "rmsd_landmark": 0.56,
+      "rmsd_global_allCA": 5.053,
+      "rmsd_pocket_readout": 0.764,
+      "n_pocket_readout": 44
     },
     "5UGC": {
-      "n_pocket": 44,
-      "rmsd_pocket": 1.452,
-      "rmsd_global_allCA": 2.855
+      "fit": "EGFR_landmarks",
+      "n_landmark_ca": 15,
+      "rmsd_landmark": 2.007,
+      "rmsd_global_allCA": 2.855,
+      "rmsd_pocket_readout": 1.552,
+      "n_pocket_readout": 44
     },
     "8FMI": "reference",
     "4LDJ": {
-      "n_pocket": 18,
-      "rmsd_pocket": 0.123,
-      "rmsd_global_allCA": 0.21
+      "fit": "KRAS_core",
+      "n_landmark_ca": 143,
+      "rmsd_landmark": 0.207,
+      "rmsd_global_allCA": 0.21,
+      "rmsd_pocket_readout": 0.154,
+      "n_pocket_readout": 29
     },
     "6OIM": {
-      "n_pocket": 18,
-      "rmsd_pocket": 0.361,
-      "rmsd_global_allCA": 1.328
+      "fit": "KRAS_core",
+      "n_landmark_ca": 140,
+      "rmsd_landmark": 0.833,
+      "rmsd_global_allCA": 1.328,
+      "rmsd_pocket_readout": 1.744,
+      "n_pocket_readout": 29
     }
   },
   "pockets": {
@@ -92,14 +107,14 @@
       "pocket_from": "6OIM",
       "ref_ligand": "MOV",
       "center": [
-        -15.846,
-        -0.166,
-        -22.534
+        -15.906,
+        -0.474,
+        -22.681
       ],
       "size": [
-        17.631,
-        23.586,
-        17.679
+        17.797,
+        23.504,
+        17.693
       ],
       "aligned_frame": "8FMI"
     }
