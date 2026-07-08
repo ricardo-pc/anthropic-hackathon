@@ -1,0 +1,107 @@
+{
+  "structures": {
+    "3POZ": {
+      "target": "EGFR",
+      "state": "WT",
+      "chain": "A",
+      "ref_ligand": "03P"
+    },
+    "8A2B": {
+      "target": "EGFR",
+      "state": "L858R",
+      "chain": "A",
+      "ref_ligand": "KY9"
+    },
+    "4I24": {
+      "target": "EGFR",
+      "state": "T790M",
+      "chain": "A",
+      "ref_ligand": "1C9"
+    },
+    "5UGC": {
+      "target": "EGFR",
+      "state": "L858R+T790M",
+      "chain": "A",
+      "ref_ligand": "8BS"
+    },
+    "8FMI": {
+      "target": "KRAS",
+      "state": "WT",
+      "chain": "A",
+      "ref_ligand": null
+    },
+    "4LDJ": {
+      "target": "KRAS",
+      "state": "G12C",
+      "chain": "A",
+      "ref_ligand": null
+    },
+    "6OIM": {
+      "target": "KRAS",
+      "state": "G12C+sotorasib",
+      "chain": "A",
+      "ref_ligand": "MOV"
+    }
+  },
+  "transforms": {
+    "3POZ": "reference",
+    "8A2B": {
+      "n_pocket": 44,
+      "rmsd_pocket": 0.88,
+      "rmsd_global_allCA": 3.145
+    },
+    "4I24": {
+      "n_pocket": 44,
+      "rmsd_pocket": 0.68,
+      "rmsd_global_allCA": 5.053
+    },
+    "5UGC": {
+      "n_pocket": 44,
+      "rmsd_pocket": 1.452,
+      "rmsd_global_allCA": 2.855
+    },
+    "8FMI": "reference",
+    "4LDJ": {
+      "n_pocket": 18,
+      "rmsd_pocket": 0.123,
+      "rmsd_global_allCA": 0.21
+    },
+    "6OIM": {
+      "n_pocket": 18,
+      "rmsd_pocket": 0.361,
+      "rmsd_global_allCA": 1.328
+    }
+  },
+  "pockets": {
+    "EGFR": {
+      "pocket_from": "3POZ",
+      "ref_ligand": "03P",
+      "center": [
+        17.417,
+        32.793,
+        11.71
+      ],
+      "size": [
+        20.75,
+        18.4,
+        21.218
+      ],
+      "aligned_frame": "3POZ"
+    },
+    "KRAS": {
+      "pocket_from": "6OIM",
+      "ref_ligand": "MOV",
+      "center": [
+        -15.846,
+        -0.166,
+        -22.534
+      ],
+      "size": [
+        17.631,
+        23.586,
+        17.679
+      ],
+      "aligned_frame": "8FMI"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+PDB,Assigned_state,Res_A,Hotspot_residues,N_mut_vs_ref,Extra_mutations_beyond_driver,Ligand_context,Audit_note
+3POZ,EGFR WT,1.5,T790/L858/V948,0,none,"TAK-285 (reversible, ATP-site)",clean WT reference
+8A2B,EGFR L858R,1.69,T790/R858/R948,2,"V948R (dimer-interface, crystallization aid)",pyrrolopyrazole (ATP-site),L858R + engineered V948R; V948 ~far from ATP pocket
+4I24,EGFR T790M,1.8,M790/L858/V948,1,none beyond T790M,"dacomitinib (covalent, ATP-site)",2 chains in ASU -> extract one protomer
+5UGC,EGFR L858R+T790M,1.58,M790/R858/R948,3,V948R (crystallization aid),aminopurine covalent (ATP-site),double mut + V948R; matches 8A2B's V948R
+8FMI,KRAS WT,1.12,G12; C51/C80/S118,1,C118S (surface/near-NKCD),"GDP.Mg, apo",'WT' but carries C118S; C118 contacts guanine
+4LDJ,KRAS G12C,1.15,C12; C51/C80/C118,1,none beyond G12C,"GDP.Mg, apo","minimal G12C, all native Cys retained"
+6OIM,KRAS G12C,1.65,C12; S51/L80/S118,4,C51S+C80L+C118S (Cys-light),GDP.Mg + sotorasib (covalent Cys12),surface-Cys-free construct for clean covalent chemistry

@@ -1,1 +1,6 @@
+# Drug pool prep (data/drugs.csv)
 rdkit>=2025.9
+
+# Structure prep (src/structure_prep.py, src/verify_prep.py)
+biopython>=1.85
+numpy>=2.0
