@@ -36,6 +36,14 @@ Push to gandalf: `rsync -avz cluster/ gandalf.berkeley.edu:~/hackathon/cluster/`
 
 (An earlier naive per-pair-subprocess version of this script was replaced once the CSV batch mode was confirmed to exist — no reason to pay the reload cost 189 times when one call does it.)
 
-## Next after the sweep runs
-- Install gnina (rescoring — the actual reported number, not DiffDock's own confidence).
-- Known-answer validation: confirm erlotinib fails on T790M and osimertinib holds (Wed success test).
+## gnina rescoring — the affinity proxy (DiffDock sweep must be done first)
+DiffDock confidence is pose-quality, not affinity. gnina rescores each rank1 pose into a real predicted binding affinity — the number the four-bucket classification rests on.
+
+1. **Install** (gandalf login node): [`setup_gnina.sh`](setup_gnina.sh) — downloads the prebuilt binary to `~/hackathon/bin/gnina`, no compiling.
+2. **One-pair test first** (inside `srun --pty --partition=gpu --gpus=1 /bin/bash`): [`test_gnina_one.sh`](test_gnina_one.sh) — confirms the binary runs, GPU/CNN works, and scores parse, before looping 189. gnina reads the heavy-atom receptor PDB and protonates internally via OpenBabel (this is the dock-time protonation deferred in `structure_prep.py`, applied uniformly to all 7 receptors).
+3. **Full rescore** (from `~/hackathon/cluster`): `sbatch rescore.sbatch` → [`rescore_gnina.py`](rescore_gnina.py) loops all 189, writes `~/hackathon/results/gnina_scores.csv` (drug, category, pdb, target, state, diffdock_confidence, gnina_affinity, gnina_cnn_score, gnina_cnn_affinity). Pull it back with `rsync` for the stats layer.
+
+Score directions: `gnina_affinity` kcal/mol, **more negative = better**; `gnina_cnn_score` 0–1 pose quality, higher = better; `gnina_cnn_affinity` predicted pK, higher = better.
+
+## Then: known-answer validation (Wed success test)
+From `gnina_scores.csv`, check the direction: erlotinib/gefitinib affinity should worsen WT→T790M; osimertinib should hold; sotorasib should be strong on G12C (6OIM) — and **watch sotorasib vs apo 4LDJ** for the induced-fit risk (scope §6.3). Single-pass direction check only; replicate-based stats are Thursday.
