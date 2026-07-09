@@ -47,5 +47,10 @@ DiffDock confidence is pose-quality, not affinity. gnina rescores each rank1 pos
 
 Score directions: `gnina_affinity` kcal/mol, **more negative = better**; `gnina_cnn_score` 0–1 pose quality, higher = better; `gnina_cnn_affinity` predicted pK, higher = better.
 
-## Then: known-answer validation (Wed success test)
-From `gnina_scores.csv`, check the direction: erlotinib/gefitinib affinity should worsen WT→T790M; osimertinib should hold; sotorasib should be strong on G12C (6OIM) — and **watch sotorasib vs apo 4LDJ** for the induced-fit risk (scope §6.3). Single-pass direction check only; replicate-based stats are Thursday.
+## Then: known-answer validation (Wed success test) — PASSED
+From `gnina_scores.csv`, `analysis/known_answer_check.py` confirms erlotinib/gefitinib lose ~1.6–2.1 kcal/mol WT→resistant-double while osimertinib holds (+0.25). KRAS confirmed covalent-confounded as predicted. Single-pass direction check.
+
+## Overnight: replicate runs for the stats layer (Thursday)
+DiffDock is stochastic — a single pass can't tell a real delta from run-to-run noise. [`overnight.sbatch`](overnight.sbatch) → [`replicate_and_rescore.py`](replicate_and_rescore.py) runs N independent full sweeps (default 10), each gnina-rescored, appended to `results/gnina_scores_replicates.csv`. Resumable at the rep level (re-submit continues from the last finished rep); harvest whatever completed by morning (6–8 reps already gives solid credible intervals). Includes a seed-safety abort if rep 2 comes out identical to rep 1.
+
+Run: `cd ~/hackathon/cluster && sbatch overnight.sbatch`, then `rsync` `gnina_scores_replicates.csv` back. The stats themselves are instant CPU on the laptop: `analysis/bootstrap_deltas.py` (Bayesian bootstrap on each WT-vs-mutant delta + BH-FDR across drugs → credible intervals). It already runs on the single-pass file as a smoke test; point it at the replicate CSV for the real thing.
