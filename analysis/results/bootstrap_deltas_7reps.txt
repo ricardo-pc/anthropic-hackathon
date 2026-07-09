@@ -1,0 +1,151 @@
+Loaded gnina_scores_replicates.csv  (max replicates per pair: 7)
+
+=== EGFR WT->L858R ===   (delta>0 = mutant binds worse = resistance)
+drug          cat                      delta            95% CI   BH-FDR
+doxycycline   repurposing_candidate    +6.26   [+4.77,+7.16]    0.000 *
+sotorasib     known_answer             +3.05   [+1.69,+4.05]    0.000 *
+lapatinib     egfr_family              +2.05   [+1.89,+2.26]    0.000 *
+crizotinib    multi_kinase             +1.76   [+1.51,+1.98]    0.000 *
+dacomitinib   egfr_family              +1.19   [+0.92,+1.40]    0.000 *
+aspirin       repurposing_candidate    +1.18   [+1.05,+1.32]    0.000 *
+propranolol   repurposing_candidate    +1.02   [+0.84,+1.24]    0.000 *
+thalidomide   repurposing_candidate    +0.90   [+0.60,+1.22]    0.000 *
+afatinib      egfr_family              +0.81   [+0.71,+0.92]    0.000 *
+verapamil     repurposing_candidate    +0.58   [+0.45,+0.70]    0.000 *
+gefitinib     known_answer             +0.50   [+0.39,+0.65]    0.000 *
+disulfiram    repurposing_candidate    +0.49   [+0.17,+0.80]    0.005 *
+erlotinib     known_answer             +0.46   [-0.00,+0.89]    0.063
+adagrasib     known_answer             +0.44   [+0.03,+0.70]    0.048 *
+sunitinib     multi_kinase             +0.42   [-0.12,+0.96]    0.141
+neratinib     egfr_family              +0.35   [+0.14,+0.53]    0.001 *
+osimertinib   known_answer             +0.11   [-0.13,+0.38]    0.417
+simvastatin   repurposing_candidate    +0.07   [-0.71,+0.91]    0.922
+dasatinib     multi_kinase             -0.14   [-0.88,+0.60]    0.754
+metformin     repurposing_candidate    -0.34   [-0.78,-0.12]    0.000 *
+sorafenib     multi_kinase             -0.40   [-0.73,+0.03]    0.083
+cimetidine    repurposing_candidate    -0.44   [-0.60,-0.27]    0.000 *
+vandetanib    egfr_family              -0.50   [-0.75,-0.37]    0.000 *
+divarasib     kras_family              -1.01   [-1.29,-0.76]    0.000 *
+itraconazole  repurposing_candidate    -2.84   [-4.42,-1.33]    0.000 *
+imatinib      multi_kinase             -3.66   [-8.68,-0.31]    0.025 *
+ponatinib     multi_kinase             -3.97   [-8.92,-1.82]    0.000 *
+
+=== EGFR WT->T790M(single) ===   (delta>0 = mutant binds worse = resistance)
+drug          cat                      delta            95% CI   BH-FDR
+ponatinib     multi_kinase            +10.71   [+2.03,+18.28]    0.020 *
+doxycycline   repurposing_candidate    +8.72   [+7.83,+9.51]    0.000 *
+simvastatin   repurposing_candidate    +8.39   [+5.64,+10.48]    0.000 *
+sotorasib     known_answer             +7.56   [+6.23,+8.51]    0.000 *
+sorafenib     multi_kinase             +4.27   [+2.39,+5.91]    0.000 *
+adagrasib     known_answer             +3.72   [+2.43,+4.64]    0.000 *
+lapatinib     egfr_family              +3.27   [+2.83,+3.68]    0.000 *
+verapamil     repurposing_candidate    +2.70   [+1.91,+3.49]    0.000 *
+divarasib     kras_family              +1.36   [+0.71,+2.12]    0.000 *
+aspirin       repurposing_candidate    +0.83   [+0.69,+0.97]    0.000 *
+propranolol   repurposing_candidate    +0.59   [+0.51,+0.65]    0.000 *
+thalidomide   repurposing_candidate    +0.56   [+0.19,+0.82]    0.008 *
+neratinib     egfr_family              +0.52   [+0.35,+0.76]    0.000 *
+cimetidine    repurposing_candidate    +0.35   [+0.12,+0.53]    0.005 *
+sunitinib     multi_kinase             +0.13   [-0.26,+0.57]    0.581
+erlotinib     known_answer             +0.13   [+0.06,+0.20]    0.000 *
+disulfiram    repurposing_candidate    +0.10   [-0.17,+0.36]    0.455
+crizotinib    multi_kinase             -0.11   [-0.29,+0.08]    0.289
+metformin     repurposing_candidate    -0.22   [-0.66,-0.01]    0.026 *
+vandetanib    egfr_family              -0.41   [-0.66,-0.29]    0.000 *
+dacomitinib   egfr_family              -0.91   [-1.19,-0.66]    0.000 *
+gefitinib     known_answer             -0.94   [-0.98,-0.88]    0.000 *
+osimertinib   known_answer             -0.97   [-1.22,-0.67]    0.000 *
+afatinib      egfr_family              -0.98   [-1.15,-0.82]    0.000 *
+itraconazole  repurposing_candidate    -1.42   [-2.98,+0.19]    0.096
+dasatinib     multi_kinase             -1.49   [-2.19,-0.79]    0.000 *
+imatinib      multi_kinase             -5.11   [-10.04,-1.71]    0.000 *
+
+=== EGFR WT->L858R+T790M ===   (delta>0 = mutant binds worse = resistance)
+drug          cat                      delta            95% CI   BH-FDR
+lapatinib     egfr_family             +10.83   [+10.59,+11.05]    0.000 *
+neratinib     egfr_family             +10.52   [+10.42,+10.64]    0.000 *
+sorafenib     multi_kinase            +10.43   [+9.90,+11.06]    0.000 *
+itraconazole  repurposing_candidate    +8.18   [+6.69,+9.63]    0.000 *
+ponatinib     multi_kinase             +5.95   [-0.46,+11.23]    0.082
+divarasib     kras_family              +3.93   [+2.66,+5.41]    0.000 *
+verapamil     repurposing_candidate    +3.62   [+1.89,+6.13]    0.000 *
+dasatinib     multi_kinase             +3.06   [+1.13,+5.66]    0.000 *
+crizotinib    multi_kinase             +2.92   [+2.54,+3.19]    0.000 *
+vandetanib    egfr_family              +2.25   [+1.48,+3.82]    0.000 *
+dacomitinib   egfr_family              +1.92   [+1.70,+2.04]    0.000 *
+erlotinib     known_answer             +1.90   [+1.83,+1.97]    0.000 *
+afatinib      egfr_family              +1.40   [+1.30,+1.53]    0.000 *
+gefitinib     known_answer             +1.37   [+1.05,+1.65]    0.000 *
+sotorasib     known_answer             +1.26   [+0.37,+1.97]    0.007 *
+doxycycline   repurposing_candidate    +1.05   [+0.03,+2.58]    0.053
+cimetidine    repurposing_candidate    +0.54   [+0.39,+0.71]    0.000 *
+aspirin       repurposing_candidate    +0.53   [+0.39,+0.69]    0.000 *
+propranolol   repurposing_candidate    +0.50   [+0.29,+0.73]    0.000 *
+adagrasib     known_answer             +0.38   [-0.59,+1.33]    0.485
+thalidomide   repurposing_candidate    +0.20   [+0.01,+0.37]    0.053
+disulfiram    repurposing_candidate    +0.07   [-0.17,+0.29]    0.554
+osimertinib   known_answer             +0.02   [-0.44,+0.46]    0.896
+sunitinib     multi_kinase             -0.05   [-0.44,+0.39]    0.828
+simvastatin   repurposing_candidate    -0.41   [-1.02,+0.22]    0.240
+metformin     repurposing_candidate    -0.54   [-1.00,-0.29]    0.000 *
+imatinib      multi_kinase             -4.19   [-9.27,-0.72]    0.004 *
+
+=== KRAS WT->G12C(apo) ===   (delta>0 = mutant binds worse = resistance)
+drug          cat                      delta            95% CI   BH-FDR
+divarasib     kras_family              +2.39   [+1.77,+3.09]    0.000 *
+adagrasib     known_answer             +2.29   [+1.29,+3.11]    0.000 *
+sorafenib     multi_kinase             +2.18   [+0.28,+5.88]    0.023 *
+ponatinib     multi_kinase             +1.70   [+1.11,+2.48]    0.000 *
+sunitinib     multi_kinase             +1.39   [+0.79,+1.84]    0.000 *
+thalidomide   repurposing_candidate    +1.06   [+0.75,+1.33]    0.000 *
+imatinib      multi_kinase             +0.93   [+0.27,+1.69]    0.010 *
+erlotinib     known_answer             +0.91   [+0.55,+1.23]    0.000 *
+gefitinib     known_answer             +0.75   [+0.37,+1.05]    0.001 *
+dasatinib     multi_kinase             +0.67   [+0.05,+1.54]    0.051
+afatinib      egfr_family              +0.61   [+0.31,+0.93]    0.000 *
+itraconazole  repurposing_candidate    +0.56   [+0.12,+1.05]    0.023 *
+sotorasib     known_answer             +0.54   [+0.11,+0.99]    0.024 *
+aspirin       repurposing_candidate    +0.53   [+0.41,+0.66]    0.000 *
+osimertinib   known_answer             +0.46   [+0.17,+0.80]    0.004 *
+simvastatin   repurposing_candidate    +0.44   [-0.17,+1.17]    0.271
+doxycycline   repurposing_candidate    +0.36   [+0.10,+0.51]    0.023 *
+verapamil     repurposing_candidate    +0.26   [-0.73,+1.07]    0.712
+crizotinib    multi_kinase             +0.12   [-0.66,+0.84]    0.809
+propranolol   repurposing_candidate    +0.10   [-0.03,+0.28]    0.262
+disulfiram    repurposing_candidate    +0.07   [-0.19,+0.33]    0.757
+lapatinib     egfr_family              +0.02   [-0.87,+0.77]    0.948
+cimetidine    repurposing_candidate    -0.06   [-0.30,+0.17]    0.749
+neratinib     egfr_family              -0.12   [-0.68,+0.29]    0.757
+vandetanib    egfr_family              -0.16   [-0.85,+0.47]    0.757
+dacomitinib   egfr_family              -0.16   [-2.25,+0.91]    0.975
+metformin     repurposing_candidate    -0.33   [-0.63,-0.06]    0.024 *
+
+=== KRAS WT->G12C(sotorasib) ===   (delta>0 = mutant binds worse = resistance)
+drug          cat                      delta            95% CI   BH-FDR
+sorafenib     multi_kinase            +24.86   [+13.75,+39.30]    0.000 *
+ponatinib     multi_kinase            +17.61   [+9.88,+24.40]    0.000 *
+itraconazole  repurposing_candidate   +16.20   [+7.70,+27.30]    0.000 *
+sunitinib     multi_kinase            +13.79   [+5.38,+27.14]    0.000 *
+cimetidine    repurposing_candidate    +6.88   [+2.07,+14.58]    0.000 *
+imatinib      multi_kinase             +5.39   [+2.00,+8.45]    0.001 *
+dasatinib     multi_kinase             +5.23   [+2.03,+10.93]    0.000 *
+osimertinib   known_answer             +4.88   [+0.48,+13.89]    0.026 *
+simvastatin   repurposing_candidate    +4.04   [+1.10,+9.34]    0.000 *
+aspirin       repurposing_candidate    +2.29   [+1.92,+2.66]    0.000 *
+propranolol   repurposing_candidate    +2.19   [+1.43,+3.26]    0.000 *
+metformin     repurposing_candidate    +1.86   [+1.40,+2.37]    0.000 *
+thalidomide   repurposing_candidate    +1.72   [+1.40,+2.17]    0.000 *
+disulfiram    repurposing_candidate    +1.46   [+1.01,+1.94]    0.000 *
+vandetanib    egfr_family              +1.30   [+0.29,+2.37]    0.020 *
+crizotinib    multi_kinase             +1.13   [-0.13,+2.22]    0.109
+verapamil     repurposing_candidate    +1.00   [-1.04,+4.21]    0.554
+erlotinib     known_answer             +0.53   [-0.96,+3.38]    0.833
+doxycycline   repurposing_candidate    +0.43   [-0.08,+1.30]    0.221
+adagrasib     known_answer             +0.11   [-0.74,+0.83]    0.813
+neratinib     egfr_family              +0.00   [-0.67,+0.73]    0.985
+gefitinib     known_answer             -0.18   [-0.92,+0.78]    0.698
+sotorasib     known_answer             -0.33   [-0.92,+0.28]    0.379
+afatinib      egfr_family              -0.47   [-0.88,-0.09]    0.021 *
+lapatinib     egfr_family              -0.75   [-1.53,-0.08]    0.043 *
+dacomitinib   egfr_family              -0.78   [-2.85,+0.30]    0.352
+divarasib     kras_family              -2.06   [-2.37,-1.76]    0.000 *
