@@ -23,7 +23,11 @@ from anthropic import beta_tool
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import triage  # noqa: E402
 
-MODEL = "claude-opus-4-8"
+# Sonnet 5 by default — this task (reasoning over ~25 rows of already-computed triage data with
+# deterministic bucket rules, and explaining it plainly) is squarely in its wheelhouse, at ~half the
+# per-query cost of Opus. Flip to Opus 4.8 for the demo recording, where phrasing matters most:
+#   TRIAGE_MODEL=claude-opus-4-8 python src/interpret.py "..."
+MODEL = os.environ.get("TRIAGE_MODEL", "claude-sonnet-5")
 
 SYSTEM = """\
 You are the interpretation layer of a mutation-aware drug-repurposing triage tool. Your user is a
@@ -111,7 +115,7 @@ def main():
         "I have a lung tumor with EGFR L858R+T790M. Which drugs should I avoid, "
         "and are there any safe repurposing bets worth a look?"
     )
-    print(f"\n\033[1mQ:\033[0m {question}\n" + "-" * 72)
+    print(f"\n\033[1mQ:\033[0m {question}\n\033[90m[{MODEL}]\033[0m\n" + "-" * 72)
 
     client = anthropic.Anthropic()
     runner = client.beta.messages.tool_runner(
