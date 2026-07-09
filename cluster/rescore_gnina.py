@@ -4,9 +4,13 @@ gnina rescore of every DiffDock rank1 pose -> the affinity proxy the four-bucket
 classification actually rests on (DiffDock confidence is a pose-quality measure, not
 affinity -- see docs/docking_score_notes.md).
 
-For each of the 189 result folders (<drug>__<pdb>/), score rank1.sdf against its
-receptor with `gnina --score_only` (no re-docking; the pose is already in the pocket).
-Collect the empirical affinity + gnina's CNN scores into one CSV.
+For each of the 189 result folders (<drug>__<pdb>/), rescore rank1.sdf against its
+receptor with `gnina --minimize` -- a LOCAL relaxation (small in-pocket nudges) then
+score. This is NOT re-docking (no global search, no box); it relieves the minor steric
+clashes DiffDock's raw poses carry. Confirmed necessary: `--score_only` on the raw pose
+gave a spurious POSITIVE affinity (+0.27) for erlotinib vs its own target WT-EGFR; after
+`--minimize` it's -7.2 kcal/mol, as expected. We also capture the minimization RMSD (how
+far the pose moved) as a QC field -- a large RMSD means the raw pose needed a big fix.
 
 Stdlib only. Run via rescore.sbatch (GPU, for CNN scoring).
 """
@@ -47,8 +51,11 @@ def parse_scores(text):
     def grab(pat):
         m = re.search(pat, text)
         return float(m.group(1)) if m else None
+    # With --minimize the Affinity line is "Affinity: <affinity> <intramol> (kcal/mol)";
+    # the first number is the binding affinity we want.
     return dict(
         gnina_affinity=grab(r"Affinity:\s*(-?\d+\.?\d*)"),        # kcal/mol, more negative = better
+        gnina_minimize_rmsd=grab(r"RMSD:\s*(-?\d+\.?\d*)"),       # QC: how far --minimize moved the pose
         gnina_cnn_score=grab(r"CNNscore:\s*(-?\d+\.?\d*)"),       # 0-1 pose quality, higher = better
         gnina_cnn_affinity=grab(r"CNNaffinity:\s*(-?\d+\.?\d*)"), # predicted pK, higher = better
     )
@@ -78,7 +85,7 @@ def main():
             continue
 
         res = subprocess.run(
-            [GNINA, "-r", rec, "-l", rank1, "--score_only"],
+            [GNINA, "-r", rec, "-l", rank1, "--minimize"],
             capture_output=True, text=True,
         )
         sc = parse_scores(res.stdout)
@@ -98,7 +105,7 @@ def main():
               f"cnn_aff={sc['gnina_cnn_affinity']} cnn_score={sc['gnina_cnn_score']}")
 
     fields = ["drug", "category", "pdb", "target", "state", "diffdock_confidence",
-              "gnina_affinity", "gnina_cnn_score", "gnina_cnn_affinity"]
+              "gnina_affinity", "gnina_minimize_rmsd", "gnina_cnn_score", "gnina_cnn_affinity"]
     with open(OUT, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()

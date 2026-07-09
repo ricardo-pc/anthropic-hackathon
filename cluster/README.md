@@ -41,7 +41,9 @@ DiffDock confidence is pose-quality, not affinity. gnina rescores each rank1 pos
 
 1. **Install** (gandalf login node): [`setup_gnina.sh`](setup_gnina.sh) — downloads the prebuilt binary to `~/hackathon/bin/gnina`, no compiling.
 2. **One-pair test first** (inside `srun --pty --partition=gpu --gpus=1 /bin/bash`): [`test_gnina_one.sh`](test_gnina_one.sh) — confirms the binary runs, GPU/CNN works, and scores parse, before looping 189. gnina reads the heavy-atom receptor PDB and protonates internally via OpenBabel (this is the dock-time protonation deferred in `structure_prep.py`, applied uniformly to all 7 receptors).
-3. **Full rescore** (from `~/hackathon/cluster`): `sbatch rescore.sbatch` → [`rescore_gnina.py`](rescore_gnina.py) loops all 189, writes `~/hackathon/results/gnina_scores.csv` (drug, category, pdb, target, state, diffdock_confidence, gnina_affinity, gnina_cnn_score, gnina_cnn_affinity). Pull it back with `rsync` for the stats layer.
+3. **Full rescore** (from `~/hackathon/cluster`): `sbatch rescore.sbatch` → [`rescore_gnina.py`](rescore_gnina.py) loops all 189, writes `~/hackathon/results/gnina_scores.csv` (drug, category, pdb, target, state, diffdock_confidence, gnina_affinity, gnina_minimize_rmsd, gnina_cnn_score, gnina_cnn_affinity). Pull it back with `rsync` for the stats layer.
+
+**Uses `gnina --minimize`, not `--score_only`.** DiffDock's raw poses carry minor steric clashes; scoring them as-is gave a spurious *positive* affinity (+0.27 kcal/mol for erlotinib on WT-EGFR — its own target). `--minimize` does a local in-pocket relaxation first (no box, no re-docking), giving −7.2 kcal/mol as expected. `gnina_minimize_rmsd` records how far each pose moved (QC — a large value flags a raw pose that needed a big fix, worth reviewing).
 
 Score directions: `gnina_affinity` kcal/mol, **more negative = better**; `gnina_cnn_score` 0–1 pose quality, higher = better; `gnina_cnn_affinity` predicted pK, higher = better.
 
