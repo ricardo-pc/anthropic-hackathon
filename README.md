@@ -42,6 +42,26 @@ python src/interpret.py "which drugs should I avoid for EGFR L858R+T790M, and an
 The interpretation agent defaults to Claude Sonnet 5; set `TRIAGE_MODEL=claude-opus-4-8` for the
 highest-quality phrasing.
 
+### Talk to it inside Claude Code / Claude Desktop (MCP)
+
+`src/mcp_server.py` exposes the triage engine as MCP tools, so you can ask Claude Code or Claude
+Desktop about a tumor in plain English and it calls the tools live — no API key of your own needed
+(the host provides Claude). Needs Python 3.10+ and `mcp` (in `requirements.txt`).
+
+- **Claude Code:** the project ships a `.mcp.json` — open Claude Code in this repo (with the venv
+  created) and approve the `onco-triage` server. Then ask e.g. *"which drugs should I avoid for KRAS G12C?"*
+- **Claude Desktop:** add to `~/Library/Application Support/Claude/claude_desktop_config.json`
+  (use absolute paths):
+  ```json
+  {"mcpServers": {"onco-triage": {
+    "command": "/ABSOLUTE/PATH/anthropic-hackathon/.venv/bin/python",
+    "args": ["/ABSOLUTE/PATH/anthropic-hackathon/src/mcp_server.py"]}}}
+  ```
+  Restart Claude Desktop; the `onco-triage` tools appear.
+
+The reasoning guardrails (docking is a proxy, repurposing hits are hypotheses, the KRAS covalent
+caveat) travel with the tool descriptions and the `note` field the tools return.
+
 ## Repository layout
 
 - `src/` — triage engine (`triage.py`), interpretation agent (`interpret.py`), structure prep.

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "onco-triage": {
+      "command": ".venv/bin/python",
+      "args": ["src/mcp_server.py"]
+    }
+  }
+}
