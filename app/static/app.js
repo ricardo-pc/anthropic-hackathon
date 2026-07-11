@@ -23,6 +23,11 @@ const api = (path, opts = {}) => fetch(path, {
 let BOOT = null;
 let lastReq = null, lastDisplay = null;   // remembered so we can re-run after a GPU connects
 
+// icon markup — defined up here so showHero() can use them the instant init() runs
+const ATOM = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="1.6" fill="currentColor"/><ellipse cx="12" cy="12" rx="10" ry="4.3"/><ellipse cx="12" cy="12" rx="10" ry="4.3" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.3" transform="rotate(120 12 12)"/></svg>`;
+const SPARK = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.7 5.1a3 3 0 0 0 1.9 1.9L21 11l-5.4 1.9a3 3 0 0 0-1.9 1.9L12 21l-1.7-6.2a3 3 0 0 0-1.9-1.9L3 11l5.4-1.9a3 3 0 0 0 1.9-1.9z"/></svg>`;
+const CHIP = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/><path d="M9.5 2v3M14.5 2v3M9.5 19v3M14.5 19v3M2 9.5h3M2 14.5h3M19 9.5h3M19 14.5h3"/></svg>`;
+
 // ---------------- init ----------------
 (async function init() {
   applyTheme(localStorage.getItem("mutationrx_theme"));
@@ -148,10 +153,6 @@ function hideSuggest() { $("suggest").hidden = true; }
 function flashHint(msg) { const h = $("askHint"); h.textContent = msg; h.style.color = "var(--c-weakened)"; setTimeout(() => h.style.color = "", 2600); }
 
 // ---------------- hero / empty ----------------
-const ATOM = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="1.6" fill="currentColor"/><ellipse cx="12" cy="12" rx="10" ry="4.3"/><ellipse cx="12" cy="12" rx="10" ry="4.3" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.3" transform="rotate(120 12 12)"/></svg>`;
-const SPARK = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.7 5.1a3 3 0 0 0 1.9 1.9L21 11l-5.4 1.9a3 3 0 0 0-1.9 1.9L12 21l-1.7-6.2a3 3 0 0 0-1.9-1.9L3 11l5.4-1.9a3 3 0 0 0 1.9-1.9z"/></svg>`;
-const CHIP = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/><path d="M9.5 2v3M14.5 2v3M9.5 19v3M14.5 19v3M2 9.5h3M2 14.5h3M19 9.5h3M19 14.5h3"/></svg>`;
-
 function previewCard() {
   // a real result, in miniature: the double-mutant verdict + a few error-bar rows + Claude's line
   const rows = [
