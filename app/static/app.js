@@ -44,9 +44,12 @@ let lastReq = null, lastDisplay = null;   // remembered so we can re-run after a
 
 async function loadBoot(attempt = 0) {
   try {
-    BOOT = await (await api("/api/bootstrap")).json();
+    const r = await api("/api/bootstrap");
+    if (!r.ok) throw new Error("HTTP " + r.status);   // 502/503 while the host is waking
+    BOOT = await r.json();
   } catch (e) {
-    if (attempt < 5) return setTimeout(() => loadBoot(attempt + 1), 1500);  // cold start / transient
+    if (attempt < 20) return setTimeout(() => loadBoot(attempt + 1), 3000);  // covers a ~60s cold start
+    $("askHint").textContent = "Still waking the server up… reload in a moment.";
     return;
   }
   renderSidebar();

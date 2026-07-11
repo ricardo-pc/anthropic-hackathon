@@ -47,6 +47,17 @@ store = JobStore(gpu=_gpu)
 _run_counts = {}  # client_id -> number of real compute runs used
 
 
+@app.middleware("http")
+async def revalidate_assets(request: Request, call_next):
+    """Make the browser revalidate the page + static assets (cheap via etag) so a redeploy is picked
+    up on a normal refresh, never a stale cached app.js."""
+    resp = await call_next(request)
+    p = request.url.path
+    if p == "/" or p.startswith("/static"):
+        resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
 def _client(x_client_id, request):
     return x_client_id or (request.client.host if request.client else "anon")
 
