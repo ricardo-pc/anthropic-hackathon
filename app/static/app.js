@@ -197,8 +197,13 @@ function showHero() {
           </div>
         </div>
         <div class="hero-right">
+          <div class="hero-mol" id="heroMol" role="button" tabindex="0" title="Explore the 3D structure">
+            <div class="hm-stage"><iframe id="heroFrame" tabindex="-1" title="3D structure of EGFR L858R+T790M" scrolling="no"></iframe>
+              <span class="hm-badge">3D structure</span><span class="hm-x">Explore in 3D &rsaquo;</span></div>
+            <div class="hm-cap"><span class="hm-gt">EGFR L858R+T790M</span><span class="hm-sub">The resistant double mutant it docks against</span></div>
+          </div>
           ${previewCard()}
-          <div class="pv-hint">Real, pre-computed result &middot; click to explore it live</div>
+          <div class="pv-hint">Real mutant structure &amp; pre-computed result &middot; click either to explore live</div>
         </div>
       </div>
       <div class="featurestrip">
@@ -207,6 +212,15 @@ function showHero() {
         <div class="fs"><span class="fs-ic">${CHIP}</span><div><b>Runs on your GPU</b><span>Any point mutation, modeled and docked on demand.</span></div></div>
       </div>
     </div>`;
+  const hm = $("heroMol");
+  if (hm) {
+    const openDbl = () => openStructure("EGFR L858R+T790M");
+    hm.onclick = openDbl;
+    hm.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDbl(); } };
+    // lazy-mount the spinning molecule a beat after the hero paints, so it never delays the hero text or bootstrap
+    setTimeout(() => { const f = $("heroFrame");
+      if (f && !f.getAttribute("src")) f.src = "/static/structure.html?v=7&bare=1&genotype=" + encodeURIComponent("EGFR L858R+T790M"); }, 350);
+  }
   if (BOOT) {
     const seen = new Set(), featured = [];   // one tumor per genotype keeps the CTA tight
     for (const t of BOOT.tumors) { if (!seen.has(t.primary_genotype)) { seen.add(t.primary_genotype); featured.push(t); } }
@@ -431,7 +445,8 @@ function renderResult(r) {
   $("workspace").innerHTML = `
     <div class="result">
       ${dryBanner}
-      <div class="rhead"><div class="gt">${esc(r.label)} <span class="tgt">· target ${esc(r.target)}</span></div><div class="tags">${tags.join("")}</div></div>
+      <div class="rhead"><div class="gt">${esc(r.label)} <span class="tgt">· target ${esc(r.target)}</span></div>
+        <div class="rhead-right">${hasStructure(r.label)?structBtn(r.label):""}<div class="tags">${tags.join("")}</div></div></div>
       <div class="card pad">
         <div class="verdict-line">${line}</div>
         <div class="tiles">
@@ -449,6 +464,48 @@ function renderResult(r) {
       <div class="foot-note">Δ = mutant minus wild-type affinity (kcal/mol); more negative binds stronger. A credible interval that excludes zero is a confident call; one that straddles zero is not. Docking affinity is a proxy, not a measured K<sub>d</sub> or clinical efficacy. This is pre-wet-lab triage, not treatment advice.</div>
     </div>`;
   attachTips();
+  const sb = $("structBtn");
+  if (sb) sb.onclick = () => openStructure(sb.dataset.label);
+}
+
+// ---------------- 3D structure viewer (non-blocking modal) ----------------
+// We have a real crystal (or, for C797S, a modeled) structure for these genotypes. A de-novo genotype
+// computed on a GPU has no bundled structure, so the button simply doesn't appear.
+function hasStructure(label) {
+  const L = (label || "").toLowerCase();
+  return /c797s/.test(L) || /t790m/.test(L) || /l858r/.test(L) || /g12c/.test(L);
+}
+const STRUCT_IC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4.5v9L12 20 4 15.5v-9z"/><path d="M12 2v18M4 6.5l8 4.5 8-4.5"/></svg>`;
+function structBtn(label) {
+  return `<button class="struct-btn" id="structBtn" data-label="${esc(label)}">${STRUCT_IC} View 3D structure</button>`;
+}
+function openStructure(label) {
+  let m = $("structModal");
+  if (!m) {
+    m = document.createElement("div");
+    m.id = "structModal"; m.className = "struct-modal";
+    m.innerHTML = `
+      <div class="sm-backdrop" data-close></div>
+      <div class="sm-panel">
+        <div class="sm-bar">
+          <span class="sm-title">3D structure</span><span class="sm-sub" id="smSub"></span>
+          <button class="sm-close" data-close aria-label="Close viewer">✕</button>
+        </div>
+        <iframe class="sm-frame" id="smFrame" title="3D molecular structure viewer" allow="fullscreen"></iframe>
+      </div>`;
+    document.body.appendChild(m);
+    m.addEventListener("click", e => { if (e.target.hasAttribute("data-close")) closeStructure(); });
+  }
+  $("smSub").textContent = label;
+  $("smFrame").src = "/static/structure.html?v=7&genotype=" + encodeURIComponent(label);
+  m.classList.add("open");
+  document.addEventListener("keydown", escClose);
+}
+function escClose(e) { if (e.key === "Escape") closeStructure(); }
+function closeStructure() {
+  const m = $("structModal");
+  if (m) { m.classList.remove("open"); $("smFrame").src = "about:blank"; }  // release the WebGL context
+  document.removeEventListener("keydown", escClose);
 }
 
 function claudePanel(r) {

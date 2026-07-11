@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Structure view — MutationRx</title>
+<script src="/static/vendor/ngl.js"></script>
+<style>
+  :root{
+    --bg:#0a0f14; --panel:rgba(14,22,30,0.72); --line:rgba(94,234,212,0.18);
+    --ink:#e7eef3; --muted:#8aa2b2; --teal:#2dd4bf; --teal-soft:#5eead4; --amber:#f5b544;
+    --serif:"Iowan Old Style",Georgia,"Times New Roman",serif;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);overflow:hidden}
+  #viewport{position:fixed;inset:0}
+  .eyebrow{position:fixed;top:18px;left:22px;z-index:5;font-size:11px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--teal);font-weight:600}
+  .headline{position:fixed;top:44px;left:22px;z-index:5;max-width:min(46ch,58vw)}
+  .headline .state{font-family:var(--serif);font-size:30px;line-height:1.06;margin:0;font-weight:500}
+  .headline .code{font-family:var(--mono);font-size:12.5px;color:var(--teal-soft);margin-top:6px}
+  .headline .caption{color:var(--muted);font-size:13.5px;line-height:1.5;margin-top:13px}
+  .headline .caption b{color:var(--ink);font-weight:600}
+  .modeled{display:inline-block;margin-top:11px;font-size:11px;font-family:var(--mono);
+    color:var(--amber);border:1px solid rgba(245,181,68,.4);border-radius:6px;padding:2px 7px}
+  .modeled[hidden]{display:none}
+  .seg{position:fixed;left:22px;bottom:22px;z-index:6;display:flex;flex-wrap:wrap;gap:5px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:5px;backdrop-filter:blur(10px)}
+  .seg button{font-family:var(--sans);font-size:12.5px;color:var(--muted);background:transparent;border:0;
+    border-radius:8px;padding:8px 12px;cursor:pointer;transition:.18s;white-space:nowrap}
+  .seg button:hover{color:var(--ink)}
+  .seg button.active{background:var(--teal);color:#04231f;font-weight:600}
+  .legend{position:fixed;right:22px;bottom:22px;z-index:6;display:flex;flex-direction:column;gap:8px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px;
+    backdrop-filter:blur(10px);font-size:12px;color:var(--muted)}
+  .legend .row{display:flex;align-items:center;gap:9px}
+  .legend .row.off{opacity:.32}
+  .dot{width:11px;height:11px;border-radius:50%;flex:none}
+  .swatch{width:11px;height:11px;border-radius:3px;flex:none}
+  .legend b{color:var(--ink);font-weight:600}
+  .hint{position:fixed;top:18px;right:22px;z-index:5;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:12px}
+  .hint button{font-family:var(--sans);font-size:12px;color:var(--muted);background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;padding:6px 11px;cursor:pointer}
+  .hint button:hover{color:var(--ink)}
+  #status{position:fixed;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;
+    pointer-events:none;color:var(--muted);font-size:14px}
+  #status.err{color:#ff8f8f;pointer-events:auto;padding:0 20px;text-align:center}
+  .fade{opacity:0;transition:opacity .3s}
+  /* bare mode: just the spinning molecule, for embedding as a showpiece (e.g. the landing hero) */
+  body.bare .eyebrow, body.bare .headline, body.bare .hint, body.bare .seg, body.bare .legend, body.bare #status{display:none}
+  @media (max-width:720px){ .headline .state{font-size:23px}.headline{max-width:86vw}.legend{display:none} }
+</style>
+</head>
+<body>
+  <div id="viewport"></div>
+  <div class="eyebrow">Structure view</div>
+  <div class="headline">
+    <h1 class="state" id="state">—</h1>
+    <div class="code" id="code"></div>
+    <div class="caption" id="caption"></div>
+    <div class="modeled" id="modeled" hidden>modeled structure · lower confidence</div>
+  </div>
+  <div class="hint">
+    <span>drag to rotate · scroll to zoom</span>
+    <button id="spinBtn">Pause spin</button>
+  </div>
+  <div class="seg" id="seg"></div>
+  <div class="legend">
+    <div class="row" id="legLig"><span class="swatch" style="background:#2dd4bf"></span><span><b>Bound inhibitor</b> (co-crystal)</span></div>
+    <div class="row"><span class="dot" style="background:#f5b544"></span><span><b>Mutated residue</b></span></div>
+    <div class="row" id="legPocket"><span class="swatch" style="background:rgba(94,234,212,.35)"></span><span><b>Binding pocket</b> surface</span></div>
+  </div>
+  <div id="status">Loading structure…</div>
+
+<script>
+// Each entry is a real structure. ligand = co-crystal ligand resname, or null when none is present
+// (e.g. the modeled C797S) — the viewer then shows the mutation alone, honestly.
+const S = {
+  EGFR_WT:{
+    file:"3POZ.pdb", pdb:"PDB 3POZ", target:"EGFR", ligand:"03P", pill:"Wild-type",
+    state:"EGFR wild-type", code:"PDB 3POZ · ATP pocket · 790 = Thr · 797 = Cys",
+    muts:[790], modeled:false,
+    caption:"The wild-type ATP pocket. <b>Erlotinib and gefitinib bind here</b> and shut the kinase down. The gatekeeper at 790 is a small threonine.",
+  },
+  EGFR_L858R:{
+    file:"8A2B.pdb", pdb:"PDB 8A2B", target:"EGFR", ligand:"KY9", pill:"L858R",
+    state:"EGFR L858R", code:"PDB 8A2B · residue 858 = Arg (mutated)",
+    muts:[858], modeled:false,
+    caption:"The activating mutation that makes the tumor EGFR-driven. <b>Leu858 → Arg858</b>. First-generation inhibitors still bind this one; it is the sensitizing mutation.",
+  },
+  EGFR_T790M:{
+    file:"4I24.pdb", pdb:"PDB 4I24", target:"EGFR", ligand:"1C9", pill:"T790M",
+    state:"EGFR T790M", code:"PDB 4I24 · residue 790 = Met (mutated)",
+    muts:[790], modeled:false,
+    caption:"The classic resistance mutation. <b>Thr790 → Met790</b>. The bulky methionine (amber) crowds the pocket. This is why first-generation TKIs lose their grip.",
+  },
+  EGFR_DBL:{
+    file:"5UGC.pdb", pdb:"PDB 5UGC", target:"EGFR", ligand:"8BS", pill:"L858R+T790M",
+    state:"EGFR L858R + T790M", code:"PDB 5UGC · 790 = Met · 858 = Arg",
+    muts:[790,858], modeled:false,
+    caption:"The resistant double mutant seen in real tumors. Two mutations at once. <b>Osimertinib still holds here; erlotinib does not.</b> This is the shift MutationRx quantifies.",
+  },
+  EGFR_C797S:{
+    file:"EGFRC797S.pdb", pdb:"modeled from 3POZ", target:"EGFR", ligand:null, pill:"C797S",
+    state:"EGFR C797S", code:"modeled · residue 797 = Ser (was Cys)",
+    muts:[797], modeled:true,
+    caption:"<b>Cys797 → Ser797</b> removes the cysteine osimertinib binds <b>covalently</b>. Non-covalent docking cannot see that loss, so MutationRx flags this rather than trusting the score.",
+  },
+  KRAS_G12C:{
+    file:"6OIM.pdb", pdb:"PDB 6OIM", target:"KRAS", ligand:"MOV", pill:"G12C",
+    state:"KRAS G12C", code:"PDB 6OIM · sotorasib bound · residue 12 = Cys",
+    muts:[12], modeled:false,
+    caption:"KRAS G12C with <b>sotorasib bound</b> in the switch-II pocket. The drug forms a <b>covalent bond to Cys12</b> (amber). Docking scores the shape but not that bond, so covalent cases are flagged.",
+  },
+};
+const FAMILY = { EGFR:["EGFR_WT","EGFR_L858R","EGFR_T790M","EGFR_DBL","EGFR_C797S"], KRAS:["KRAS_G12C"] };
+
+// map an app genotype label -> a structure key
+function keyFor(label){
+  const L = (label||"").toLowerCase().replace(/\s+/g,"");
+  if (L.includes("c797s")) return "EGFR_C797S";
+  if (L.includes("l858r") && L.includes("t790m")) return "EGFR_DBL";
+  if (L.includes("t790m")) return "EGFR_T790M";
+  if (L.includes("l858r")) return "EGFR_L858R";
+  if (L.includes("g12c")) return "KRAS_G12C";
+  if (L.startsWith("egfr")) return "EGFR_WT";
+  return "EGFR_T790M";
+}
+
+const stage = new NGL.Stage("viewport", { backgroundColor:"#0a0f14", quality:"high" });
+window.addEventListener("resize", ()=>stage.handleResize());
+const statusEl = document.getElementById("status");
+const segEl = document.getElementById("seg");
+let spinning = true;
+
+function setSpin(on){
+  spinning = on;
+  stage.setSpin(on ? [0,1,0] : null, 0.006);
+  document.getElementById("spinBtn").textContent = on ? "Pause spin" : "Resume spin";
+}
+document.getElementById("spinBtn").onclick = ()=>setSpin(!spinning);
+stage.viewer.container.addEventListener("mousedown", ()=>{ if(spinning) stage.setSpin(null); });
+stage.viewer.container.addEventListener("mouseup", ()=>{ if(spinning) stage.setSpin([0,1,0],0.006); });
+
+async function show(key){
+  const s = S[key]; if(!s) return;
+  statusEl.className=""; statusEl.textContent="Loading "+s.pdb+"…";
+  document.getElementById("state").textContent = s.state;
+  document.getElementById("code").textContent = s.code;
+  document.getElementById("caption").innerHTML = s.caption;
+  document.getElementById("modeled").hidden = !s.modeled;
+  document.getElementById("legLig").classList.toggle("off", !s.ligand);
+  document.getElementById("legPocket").classList.toggle("off", !s.ligand);
+  [...segEl.children].forEach(b=>b.classList.toggle("active", b.dataset.key===key));
+
+  try{
+    stage.removeAllComponents();
+    const comp = await stage.loadFile("/static/structures/"+s.file);
+
+    comp.addRepresentation("cartoon", {
+      sele:"polymer", colorScheme:"uniform", colorValue:"#64788c", opacity:0.95, smoothSheet:true
+    });
+
+    const mutSele = "("+s.muts.join(" or ")+") and :A and sidechainAttached";
+    // fast reps first so the molecule paints immediately
+    if (s.ligand){
+      comp.addRepresentation("ball+stick", {
+        sele:"["+s.ligand+"]", colorScheme:"uniform", colorValue:"#2dd4bf",
+        radiusScale:1.15, aspectRatio:1.6
+      });
+    }
+    comp.addRepresentation("ball+stick", {
+      sele:mutSele, colorScheme:"uniform", colorValue:"#f5b544", radiusScale:1.6, aspectRatio:1.5
+    });
+    comp.addRepresentation("spacefill", {
+      sele:mutSele, colorScheme:"uniform", colorValue:"#f5b544", opacity:0.22
+    });
+
+    // Frame the ligand (which sits in the pocket) or, when there is no ligand, the mutated residue.
+    // NB: use bare selections here — a compound "byres (... around N)" can hand autoView a degenerate
+    // bounding box on some multi-copy structures (e.g. 5UGC), parking the camera thousands of units away.
+    const view = s.ligand ? "["+s.ligand+"]" : "("+s.muts.join(" or ")+") and :A";
+    // handleResize first: inside the modal iframe the stage may have been built before layout settled,
+    // so autoView would otherwise fit against a stale (tiny) viewport and park the camera far away.
+    stage.handleResize();
+    comp.autoView(view, 1400);
+    requestAnimationFrame(()=>{ stage.handleResize(); comp.autoView(view, 0); });
+    statusEl.classList.add("fade");
+    if(spinning) stage.setSpin([0,1,0],0.006);
+
+    // the pocket surface is the expensive step (synchronous mesh build); defer it one tick and use a
+    // coarser resolution so the viewer feels instant and the cavity fades in a beat later.
+    if (s.ligand) setTimeout(()=>{
+      try{
+        comp.addRepresentation("surface", {
+          sele:"polymer and byres ( ["+s.ligand+"] around 5 )",
+          colorScheme:"uniform", colorValue:"#3a5566", opacity:0.16, side:"front",
+          surfaceType:"av", probeRadius:1.2, scaleFactor:1.3
+        });
+      }catch(e){ console.warn("surface skipped:", e); }
+    }, 60);
+  }catch(err){
+    statusEl.className="err";
+    statusEl.textContent = "Could not render "+s.pdb+": "+(err&&err.message?err.message:err);
+    console.error(err);
+  }
+}
+
+// which genotype opened us, and therefore which family of pills to show
+const params = new URLSearchParams(location.search);
+if (params.get("bare")) document.body.classList.add("bare");   // molecule only, no overlay chrome
+const startKey = keyFor(params.get("genotype") || "");
+const fam = S[startKey].target;
+FAMILY[fam].forEach(k=>{
+  const b=document.createElement("button");
+  b.textContent=S[k].pill; b.dataset.key=k; b.onclick=()=>show(k);
+  segEl.appendChild(b);
+});
+stage.setSpin([0,1,0],0.006);
+show(startKey);
+</script>
+</body>
+</html>
