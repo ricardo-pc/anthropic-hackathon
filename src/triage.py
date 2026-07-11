@@ -16,6 +16,7 @@ positive delta = binds worse on the mutant = resistance):
 
 CLI:  python src/triage.py "EGFR L858R+T790M"
 """
+import copy
 import csv
 import json
 import os
@@ -27,6 +28,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPL = f"{HERE}/data/gnina_scores_replicates.csv"
 REGISTRY = f"{HERE}/config/mutations.json"
+TRIAGE_CACHE = f"{HERE}/data/triage_cache.json"  # precomputed results for the static registry genotypes
 
 # --- tunable thresholds (documented, not magic) ---
 BIND_KCAL = -6.0      # affinity <= this counts as "binds"
@@ -152,12 +154,48 @@ def triage_structures(wt_pdb, mut_pdb, target, label, note=None, data=None):
     return dict(mutation=label, target=target, note=note, drugs=results)
 
 
+_TCACHE = None
+
+
+def _triage_cache():
+    """Lazily load the precomputed triage results (empty dict if the cache file is absent)."""
+    global _TCACHE
+    if _TCACHE is None:
+        try:
+            with open(TRIAGE_CACHE) as f:
+                _TCACHE = json.load(f)
+        except (OSError, ValueError):
+            _TCACHE = {}
+    return _TCACHE
+
+
 def triage(mutation):
-    """Return the ranked, bucketed drug list for a registry mutation."""
+    """Return the ranked, bucketed drug list for a registry mutation.
+
+    Serves a PRECOMPUTED result from data/triage_cache.json when present -- instant, and it avoids
+    re-running the 4000-iteration bootstrap on every request (which is slow on a small hosted CPU).
+    Falls back to live computation for genotypes not in the cache (e.g. a bring-your-own-GPU mutation).
+    Rebuild the cache with build_triage_cache() whenever the docking data changes.
+    """
     if mutation not in MUTATIONS:
         raise KeyError(f"unknown mutation {mutation!r}; known: {list(MUTATIONS)}")
+    cached = _triage_cache().get(mutation)
+    if cached is not None:
+        return copy.deepcopy(cached)
     spec = MUTATIONS[mutation]
     return triage_structures(spec["wt"], spec["mut"], spec["target"], mutation, spec.get("note"))
+
+
+def build_triage_cache(path=TRIAGE_CACHE):
+    """Precompute triage for every registry genotype and write the cache JSON (run at build time)."""
+    data = _load()  # load the docking scores once and reuse across all genotypes
+    out = {}
+    for label, spec in MUTATIONS.items():
+        out[label] = triage_structures(spec["wt"], spec["mut"], spec["target"], label,
+                                       spec.get("note"), data=data)
+    with open(path, "w") as f:
+        json.dump(out, f)
+    return out
 
 
 def list_mutations():
