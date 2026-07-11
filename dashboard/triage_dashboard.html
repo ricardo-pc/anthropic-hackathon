@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mutation-aware drug-repurposing triage</title>
+<style>
+  :root{
+    --surface:#fcfcfb; --plane:#f4f4f1; --card:#fff; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10); --accent:#2a78d6;
+    --c-weakened:#d03b3b; --c-robust:#0ca30c; --c-improved:#2a78d6; --c-nonbinder:#898781;
+    --chip:#f0efec; --tint-w:rgba(208,59,59,.06); --tint-r:rgba(12,163,12,.06);
+    --tint-i:rgba(42,120,214,.06); --tint-n:rgba(137,135,129,.06);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --surface:#1a1a19; --plane:#0d0d0d; --card:#1f1f1d; --ink:#fff; --ink2:#c3c2b7; --muted:#8f8d86;
+      --grid:#2c2c2a; --axis:#3a3a37; --border:rgba(255,255,255,0.10); --accent:#3987e5;
+      --c-weakened:#e66767; --c-robust:#12b312; --c-improved:#3987e5; --c-nonbinder:#8f8d86;
+      --chip:#26261f; --tint-w:rgba(230,103,103,.09); --tint-r:rgba(18,179,18,.08);
+      --tint-i:rgba(57,135,229,.09); --tint-n:rgba(143,141,134,.08);
+    }
+  }
+  :root[data-theme=light]{
+    --surface:#fcfcfb; --plane:#f4f4f1; --card:#fff; --ink:#0b0b0b; --ink2:#52514e; --grid:#e1e0d9;
+    --axis:#c3c2b7; --border:rgba(11,11,11,0.10); --accent:#2a78d6;
+    --c-weakened:#d03b3b; --c-improved:#2a78d6; --c-nonbinder:#898781; --chip:#f0efec;
+    --tint-w:rgba(208,59,59,.06); --tint-r:rgba(12,163,12,.06); --tint-i:rgba(42,120,214,.06); --tint-n:rgba(137,135,129,.06);
+  }
+  :root[data-theme=dark]{
+    --surface:#1a1a19; --plane:#0d0d0d; --card:#1f1f1d; --ink:#fff; --ink2:#c3c2b7; --grid:#2c2c2a;
+    --axis:#3a3a37; --border:rgba(255,255,255,0.10); --accent:#3987e5;
+    --c-weakened:#e66767; --c-robust:#12b312; --c-improved:#3987e5; --c-nonbinder:#8f8d86; --chip:#26261f;
+    --tint-w:rgba(230,103,103,.09); --tint-r:rgba(18,179,18,.08); --tint-i:rgba(57,135,229,.09); --tint-n:rgba(143,141,134,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--plane);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 72px}
+  a{color:var(--accent)}
+
+  /* hero */
+  .hero{padding:40px 0 20px}
+  .eyebrow{font-size:12px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+  h1{font-size:32px;line-height:1.12;letter-spacing:-0.02em;margin:0 0 12px;max-width:20ch}
+  .lede{font-size:17px;color:var(--ink2);margin:0 0 18px;max-width:64ch}
+  .why{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:22px 0 4px}
+  .why .c{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .why .c b{display:block;font-size:13px;margin-bottom:3px}
+  .why .c span{font-size:12.5px;color:var(--ink2)}
+
+  /* controls */
+  .controls{position:sticky;top:0;z-index:10;background:var(--plane);
+    display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;padding:14px 0;border-bottom:1px solid var(--border)}
+  .ctl{display:flex;flex-direction:column;gap:5px}
+  .ctl label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  select{font:inherit;font-size:14px;padding:8px 10px;border-radius:8px;border:1px solid var(--axis);
+    background:var(--card);color:var(--ink);min-width:200px}
+  .tcga{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+  .tcga .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);width:100%}
+  .tumor-btn{font:inherit;font-size:12.5px;padding:8px 11px;border-radius:8px;cursor:pointer;
+    border:1px solid var(--axis);background:var(--card);color:var(--ink)}
+  .tumor-btn:hover{border-color:var(--accent)}
+  .tumor-btn.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);color:var(--accent)}
+
+  section{margin-top:26px}
+  .sec-h{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+
+  /* verdict */
+  .genotype{font-size:20px;font-weight:700;letter-spacing:-0.01em;margin:0 0 2px}
+  .genotype .tgt{color:var(--muted);font-weight:600;font-size:15px}
+  .verdict-line{font-size:15px;color:var(--ink2);margin:0 0 16px;max-width:74ch}
+  .verdict-line b{color:var(--ink)}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .tile{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden}
+  .tile:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
+  .tile.w:before{background:var(--c-weakened)} .tile.r:before{background:var(--c-robust)} .tile.h:before{background:var(--accent)}
+  .tile .n{font-size:34px;font-weight:750;letter-spacing:-0.02em;line-height:1}
+  .tile .k{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:2px 0 6px}
+  .tile.w .k{color:var(--c-weakened)} .tile.r .k{color:var(--c-robust)} .tile.h .k{color:var(--accent)}
+  .tile .names{font-size:12.5px;color:var(--ink2);line-height:1.4}
+
+  /* badges */
+  .badges{display:flex;flex-direction:column;gap:10px}
+  .badge{display:flex;gap:11px;align-items:flex-start;background:var(--card);border:1px solid var(--border);
+    border-radius:12px;padding:12px 14px;font-size:13px}
+  .badge .ic{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+    font-size:13px;font-weight:800;color:#fff;margin-top:1px}
+  .badge.valid .ic{background:var(--c-robust)} .badge.real .ic{background:var(--accent)}
+  .badge.caveat .ic{background:var(--c-nonbinder)}
+  .badge b{color:var(--ink)}
+  .badge .bt{color:var(--ink2)}
+
+  /* chart */
+  .axis-ends{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);padding:0 2px 6px}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--ink2);padding:2px 2px 10px}
+  .legend .it{display:flex;align-items:center;gap:6px}
+  .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .axkey{color:var(--muted)}
+  .bucket{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:6px 16px 10px;margin-bottom:14px;border-left-width:4px;border-left-style:solid}
+  .bucket.b-weakened{border-left-color:var(--c-weakened);background:linear-gradient(var(--tint-w),var(--tint-w)),var(--card)}
+  .bucket.b-robust{border-left-color:var(--c-robust);background:linear-gradient(var(--tint-r),var(--tint-r)),var(--card)}
+  .bucket.b-improved{border-left-color:var(--c-improved);background:linear-gradient(var(--tint-i),var(--tint-i)),var(--card)}
+  .bucket.b-non-binder{border-left-color:var(--c-nonbinder);background:linear-gradient(var(--tint-n),var(--tint-n)),var(--card)}
+  .bhead{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;padding:12px 0 6px}
+  .bhead .desc{font-weight:400;color:var(--ink2);font-size:13px}
+  .bhead .ct{margin-left:auto;color:var(--muted);font-size:12px;font-weight:600}
+  table.rows{width:100%;border-collapse:collapse}
+  .rows td{padding:9px 6px;border-top:1px solid var(--grid);vertical-align:middle}
+  .rows tr:first-child td{border-top:none}
+  .dname{font-weight:650;font-size:14px;white-space:nowrap}
+  .bench{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+    color:var(--c-robust);border:1px solid var(--c-robust);border-radius:5px;padding:0 4px;margin-left:6px;vertical-align:1px}
+  .cat{display:block;color:var(--muted);font-size:11px;font-weight:400;margin-top:1px}
+  .track{position:relative;height:30px;min-width:190px}
+  .zero{position:absolute;top:4px;bottom:4px;width:1px;background:var(--axis);opacity:.6}
+  .ci{position:absolute;top:12.5px;height:5px;border-radius:3px;opacity:.3}
+  .dot{position:absolute;top:9px;width:10px;height:10px;border-radius:50%;margin-left:-5px;
+    border:2px solid var(--card);box-shadow:0 1px 2px rgba(15,21,25,.2);z-index:1}
+  .chev{position:absolute;top:6px;font-size:17px;line-height:1;font-weight:800}
+  .num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;font-size:13.5px;font-weight:600}
+  .ci-txt{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:12px;white-space:nowrap}
+  .conf{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+  .conf.low{color:var(--c-weakened)} .conf.medium{color:var(--muted)} .conf.high{color:var(--ink2)}
+
+  /* claude */
+  .claude{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+  .claude .ch{display:flex;align-items:center;gap:9px;padding:13px 16px;border-bottom:1px solid var(--border)}
+  .claude .ch .dot2{width:9px;height:9px;border-radius:50%;background:var(--accent)}
+  .claude .ch b{font-size:14px}
+  .claude .ch .tag{margin-left:auto;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+    color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:2px 7px}
+  .claude .body{padding:8px 18px 16px;font-size:14px;color:var(--ink2)}
+  .claude .body h4{color:var(--accent);font-size:14px;font-weight:650;letter-spacing:-0.01em;margin:16px 0 5px}
+  .claude .body strong{color:var(--ink)}
+  .claude .body ul{margin:6px 0;padding-left:20px}
+  .claude .empty{padding:20px 18px;color:var(--muted);font-size:13.5px}
+  .claude .empty code{background:var(--chip);padding:2px 6px;border-radius:5px;font-size:12.5px;color:var(--ink)}
+
+  /* byo */
+  .byo{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+  .byo h3{margin:0 0 6px;font-size:17px}
+  .byo p{color:var(--ink2);font-size:14px;margin:0 0 14px;max-width:72ch}
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .step{font-size:12.5px}
+  .step .sn{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent);
+    color:#fff;font-weight:800;font-size:12px;margin-bottom:7px}
+  .step b{display:block;margin-bottom:2px}
+  .step span{color:var(--ink2)}
+  pre{background:var(--chip);border:1px solid var(--border);border-radius:10px;padding:13px 15px;overflow-x:auto;
+    font-size:12.5px;line-height:1.5;margin:0}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+  .foot{margin-top:26px;color:var(--muted);font-size:11.5px;max-width:88ch;line-height:1.55}
+  .tip{position:fixed;pointer-events:none;z-index:30;background:var(--ink);color:var(--surface);
+    font-size:12px;padding:8px 10px;border-radius:8px;max-width:300px;opacity:0;transition:opacity .08s;
+    box-shadow:0 6px 20px rgba(0,0,0,.28);line-height:1.4}
+  @media (max-width:720px){
+    .why,.tiles,.steps{grid-template-columns:1fr} h1{font-size:26px} .tcga{margin-left:0}
+    .cat{display:inline;margin-left:6px} .ci-txt{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <p class="eyebrow">Mutation-aware drug-repurposing triage</p>
+    <h1>When a tumor mutates, the drug that worked stops working. Which one do you try next?</h1>
+    <p class="lede">Targeted cancer drugs fail by resistance — the tumor changes shape and the drug no
+      longer binds. Deciding what to test next, or whether an already-approved drug could be
+      repurposed, means expensive, slow wet-lab screening. This tool is the fast first pass: for a
+      tumor's driver mutation it scores a panel of approved drugs against the wild-type and mutant
+      protein and sorts them into <b>what to stop</b>, <b>what still binds</b>, and <b>what's worth
+      testing</b> — with the uncertainty stated, before you spend a day at the bench.</p>
+    <div class="why">
+      <div class="c"><b>Grounded in physics</b><span>Each drug is docked against the real mutant
+        structure and rescored for binding affinity — not a guess from a text model.</span></div>
+      <div class="c"><b>Honest about uncertainty</b><span>Every call carries a 95% credible interval
+        from replicate runs. Affinity is a proxy, not a K<sub>d</sub>; repurposing hits are
+        hypotheses, never discoveries.</span></div>
+      <div class="c"><b>Reviewed by Claude</b><span>Docking scores drugs that don't really bind. Claude
+        weighs each hit by mechanism and flags the likely artifacts — so you test signal, not noise.</span></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="ctl"><label for="cancer">Cancer type</label><select id="cancer"></select></div>
+    <div class="ctl"><label for="mutation">Mutation</label><select id="mutation"></select></div>
+    <div class="tcga" id="tcga"><span class="lbl">&hellip; or load a real, de-identified TCGA patient tumor</span></div>
+  </div>
+
+  <section id="verdictSec">
+    <p class="sec-h">The verdict</p>
+    <div class="genotype" id="genotype"></div>
+    <p class="verdict-line" id="verdictLine"></p>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section id="badgeSec">
+    <p class="sec-h">Does it hold up?</p>
+    <div class="badges" id="badges"></div>
+  </section>
+
+  <section>
+    <p class="sec-h">The evidence &mdash; wild-type &rarr; mutant binding shift</p>
+    <div class="legend">
+      <span class="it"><span class="sw" style="background:var(--c-weakened)"></span>Weakened</span>
+      <span class="it"><span class="sw" style="background:var(--c-robust)"></span>Robust</span>
+      <span class="it"><span class="sw" style="background:var(--c-improved)"></span>Improved</span>
+      <span class="it"><span class="sw" style="background:var(--c-nonbinder)"></span>Non-binder / unreliable</span>
+      <span class="it axkey">&#9679; = &Delta; (mutant&minus;WT) &nbsp; &#124;&mdash;&#124; = 95% CI &nbsp; dashed = &plusmn;1 kcal/mol "matters" line</span>
+    </div>
+    <div class="axis-ends"><span>&larr; binds better on the mutant</span>
+      <span>0 = no change</span><span>binds worse (resistance) &rarr;</span></div>
+    <div id="chart"></div>
+  </section>
+
+  <section id="claudeSec">
+    <p class="sec-h">Claude's read</p>
+    <div class="claude" id="claude"></div>
+  </section>
+
+  <section>
+    <p class="sec-h">Run it on your own tumor</p>
+    <div class="byo">
+      <h3>Bring your own tumor &mdash; and your own GPU</h3>
+      <p>You are not limited to these examples. The docking is the only GPU-heavy step, and it runs on
+        <i>your</i> hardware (a lab cluster, or a rented cloud GPU). Give the tool your tumor's
+        wild-type and mutant structures, run the documented pipeline, add one config entry, and the
+        same triage and this page work on your genotype.</p>
+      <div class="steps">
+        <div class="step"><div class="sn">1</div><b>Structures</b><span>Get the wild-type and mutant PDB structures for your target.</span></div>
+        <div class="step"><div class="sn">2</div><b>Dock on your GPU</b><span>Run DiffDock + gnina from <code>cluster/</code> against the drug panel.</span></div>
+        <div class="step"><div class="sn">3</div><b>Register it</b><span>Add one entry to <code>config/mutations.json</code> mapping the label to the structures.</span></div>
+        <div class="step"><div class="sn">4</div><b>Triage</b><span>Rebuild — your genotype now appears here with full credible intervals.</span></div>
+      </div>
+<pre><code>// config/mutations.json — add your genotype, no code changes
+"EGFR L747_P753delinsS": {
+  "target": "EGFR", "wt": "3POZ", "mut": "YOUR_PDB",
+  "note": "exon-19 deletion; sensitizing"
+}</code></pre>
+      <p style="margin:14px 0 0;font-size:13px">Full walkthrough: <code>docs/bring_your_own_tumor.md</code>. The GPU run stays on your side — the tool ingests the scores it produces.</p>
+    </div>
+  </section>
+
+  <div class="foot" id="foot"></div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const DATA = {"generated": "2026-07-11", "thresholds": {"bind_kcal": -6.0, "delta_meaningful": 1.0}, "domain": [-6.0, 6.0], "cancer_types": {"lung cancer": ["EGFR L858R", "EGFR T790M", "EGFR L858R+T790M", "KRAS G12C", "EGFR C797S"], "colorectal cancer": ["KRAS G12C"]}, "mutations": {"EGFR L858R": {"mutation": "EGFR L858R", "target": "EGFR", "note": null, "drugs": [{"drug": "ponatinib", "category": "multi_kinase", "bucket": "improved", "confidence": "high", "reason": "binds meaningfully and significantly better on the mutant", "affinity_wt": -7.21, "affinity_mut": -10.5, "delta": -3.3, "ci95": [-6.91, -1.78]}, {"drug": "sorafenib", "category": "multi_kinase", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -9.44, "affinity_mut": -9.77, "delta": -0.33, "ci95": [-0.72, 0.15]}, {"drug": "lapatinib", "category": "egfr_family", "bucket": "weakened", "confidence": "high", "reason": "significantly and meaningfully weaker on the mutant, though still above threshold", "affinity_wt": -10.7, "affinity_mut": -8.7, "delta": 2.0, "ci95": [1.84, 2.18]}, {"drug": "vandetanib", "category": "egfr_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.92, "affinity_mut": -8.48, "delta": -0.56, "ci95": [-0.79, -0.41]}, {"drug": "divarasib", "category": "kras_family", "bucket": "improved", "confidence": "high", "reason": "binds meaningfully and significantly better on the mutant", "affinity_wt": -6.41, "affinity_mut": -8.41, "delta": -2.0, "ci95": [-4.33, -0.97]}, {"drug": "imatinib", "category": "multi_kinase", "bucket": "improved", "confidence": "high", "reason": "binds meaningfully and significantly better on the mutant", "affinity_wt": -5.67, "affinity_mut": -8.32, "delta": -2.65, "ci95": [-6.7, -0.27]}, {"drug": "neratinib", "category": "egfr_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -8.37, "affinity_mut": -8.0, "delta": 0.37, "ci95": [0.19, 0.51]}, {"drug": "itraconazole", "category": "repurposing_candidate", "bucket": "improved", "confidence": "high", "reason": "binds meaningfully and significantly better on the mutant", "affinity_wt": -4.69, "affinity_mut": -7.84, "delta": -3.15, "ci95": [-4.46, -1.82]}, {"drug": "dacomitinib", "category": "egfr_family", "bucket": "weakened", "confidence": "high", "reason": "significantly and meaningfully weaker on the mutant, though still above threshold", "affinity_wt": -8.61, "affinity_mut": -7.43, "delta": 1.18, "ci95": [0.97, 1.36]}, {"drug": "dasatinib", "category": "multi_kinase", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.27, "affinity_mut": -7.34, "delta": -0.07, "ci95": [-0.69, 0.55]}, {"drug": "afatinib", "category": "egfr_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -8.04, "affinity_mut": -7.29, "delta": 0.75, "ci95": [0.66, 0.84]}, {"drug": "gefitinib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.73, "affinity_mut": -7.18, "delta": 0.56, "ci95": [0.42, 0.69]}, {"drug": "sunitinib", "category": "multi_kinase", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.56, "affinity_mut": -7.1, "delta": 0.45, "ci95": [0.03, 0.87]}, {"drug": "adagrasib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.15, "affinity_mut": -6.83, "delta": 0.32, "ci95": [0.0, 0.57]}, {"drug": "erlotinib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.09, "affinity_mut": -6.68, "delta": 0.41, "ci95": [0.0, 0.83]}, {"drug": "osimertinib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -6.67, "affinity_mut": -6.61, "delta": 0.06, "ci95": [-0.12, 0.28]}, {"drug": "verapamil", "category": "repurposing_candidate", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.2, "affinity_mut": -6.6, "delta": 0.6, "ci95": [0.35, 0.85]}, {"drug": "propranolol", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "significantly and meaningfully weaker on the mutant, though still above threshold", "affinity_wt": -7.65, "affinity_mut": -6.53, "delta": 1.12, "ci95": [0.95, 1.28]}, {"drug": "crizotinib", "category": "multi_kinase", "bucket": "weakened", "confidence": "high", "reason": "significantly and meaningfully weaker on the mutant, though still above threshold", "affinity_wt": -8.37, "affinity_mut": -6.52, "delta": 1.84, "ci95": [1.64, 2.02]}, {"drug": "thalidomide", "category": "repurposing_candidate", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.21, "affinity_mut": -6.41, "delta": 0.8, "ci95": [0.55, 1.07]}, {"drug": "simvastatin", "category": "repurposing_candidate", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -6.14, "affinity_mut": -6.3, "delta": -0.16, "ci95": [-0.95, 0.61]}, {"drug": "cimetidine", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.25, "affinity_mut": -5.49, "delta": -0.24, "ci95": [-0.45, -0.04]}, {"drug": "aspirin", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.25, "affinity_mut": -5.12, "delta": 1.13, "ci95": [1.04, 1.25]}, {"drug": "disulfiram", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -4.34, "affinity_mut": -3.93, "delta": 0.41, "ci95": [0.15, 0.68]}, {"drug": "metformin", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -3.52, "affinity_mut": -3.78, "delta": -0.27, "ci95": [-0.6, -0.11]}, {"drug": "sotorasib", "category": "known_answer", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.86, "affinity_mut": -2.85, "delta": 3.01, "ci95": [1.21, 4.45]}, {"drug": "doxycycline", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -7.67, "affinity_mut": -1.85, "delta": 5.82, "ci95": [4.45, 6.74]}]}, "EGFR T790M": {"mutation": "EGFR T790M", "target": "EGFR", "note": "single T790M; clinically T790M usually co-occurs with L858R -- see 'EGFR L858R+T790M', which is the resistant tumor and gives the reliable read.", "drugs": [{"drug": "imatinib", "category": "multi_kinase", "bucket": "improved", "confidence": "high", "reason": "binds meaningfully and significantly better on the mutant", "affinity_wt": -5.67, "affinity_mut": -9.66, "delta": -3.98, "ci95": [-7.95, -1.59]}, {"drug": "dacomitinib", "category": "egfr_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -8.61, "affinity_mut": -9.52, "delta": -0.91, "ci95": [-1.13, -0.72]}, {"drug": "afatinib", "category": "egfr_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -8.04, "affinity_mut": -8.96, "delta": -0.92, "ci95": [-1.08, -0.73]}, {"drug": "dasatinib", "category": "multi_kinase", "bucket": "improved", "confidence": "high", "reason": "binds meaningfully and significantly better on the mutant", "affinity_wt": -7.27, "affinity_mut": -8.75, "delta": -1.48, "ci95": [-2.11, -0.89]}, {"drug": "gefitinib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.73, "affinity_mut": -8.69, "delta": -0.96, "ci95": [-1.03, -0.91]}, {"drug": "vandetanib", "category": "egfr_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.92, "affinity_mut": -8.42, "delta": -0.5, "ci95": [-0.72, -0.35]}, {"drug": "crizotinib", "category": "multi_kinase", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -8.37, "affinity_mut": -8.33, "delta": 0.04, "ci95": [-0.16, 0.28]}, {"drug": "neratinib", "category": "egfr_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -8.37, "affinity_mut": -7.81, "delta": 0.56, "ci95": [0.38, 0.79]}, {"drug": "osimertinib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -6.67, "affinity_mut": -7.66, "delta": -0.99, "ci95": [-1.18, -0.77]}, {"drug": "lapatinib", "category": "egfr_family", "bucket": "weakened", "confidence": "high", "reason": "significantly and meaningfully weaker on the mutant, though still above threshold", "affinity_wt": -10.7, "affinity_mut": -7.64, "delta": 3.06, "ci95": [2.69, 3.45]}, {"drug": "sunitinib", "category": "multi_kinase", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.56, "affinity_mut": -7.57, "delta": -0.02, "ci95": [-0.36, 0.34]}, {"drug": "propranolol", "category": "repurposing_candidate", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.65, "affinity_mut": -7.04, "delta": 0.61, "ci95": [0.55, 0.66]}, {"drug": "erlotinib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.09, "affinity_mut": -6.95, "delta": 0.14, "ci95": [0.09, 0.2]}, {"drug": "thalidomide", "category": "repurposing_candidate", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.21, "affinity_mut": -6.67, "delta": 0.54, "ci95": [0.27, 0.75]}, {"drug": "itraconazole", "category": "repurposing_candidate", "bucket": "improved", "confidence": "high", "reason": "binds meaningfully and significantly better on the mutant", "affinity_wt": -4.69, "affinity_mut": -6.52, "delta": -1.83, "ci95": [-3.14, -0.51]}, {"drug": "divarasib", "category": "kras_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -6.41, "affinity_mut": -6.19, "delta": 0.21, "ci95": [-2.09, 1.57]}, {"drug": "aspirin", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.25, "affinity_mut": -5.5, "delta": 0.75, "ci95": [0.58, 0.88]}, {"drug": "verapamil", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -7.2, "affinity_mut": -4.91, "delta": 2.28, "ci95": [1.48, 3.12]}, {"drug": "sorafenib", "category": "multi_kinase", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -9.44, "affinity_mut": -4.89, "delta": 4.55, "ci95": [3.06, 5.83]}, {"drug": "cimetidine", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.25, "affinity_mut": -4.82, "delta": 0.43, "ci95": [0.23, 0.62]}, {"drug": "disulfiram", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -4.34, "affinity_mut": -4.17, "delta": 0.17, "ci95": [-0.05, 0.38]}, {"drug": "metformin", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -3.52, "affinity_mut": -3.68, "delta": -0.16, "ci95": [-0.51, -0.0]}, {"drug": "adagrasib", "category": "known_answer", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -7.15, "affinity_mut": -3.53, "delta": 3.62, "ci95": [2.64, 4.31]}, {"drug": "doxycycline", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -7.67, "affinity_mut": 0.62, "delta": 8.29, "ci95": [7.58, 8.99]}, {"drug": "sotorasib", "category": "known_answer", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -5.86, "affinity_mut": 0.73, "delta": 6.59, "ci95": [4.16, 8.2]}, {"drug": "simvastatin", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -6.14, "affinity_mut": 1.74, "delta": 7.88, "ci95": [5.77, 9.72]}, {"drug": "ponatinib", "category": "multi_kinase", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -7.21, "affinity_mut": 8.12, "delta": 15.32, "ci95": [7.67, 21.43]}]}, "EGFR L858R+T790M": {"mutation": "EGFR L858R+T790M", "target": "EGFR", "note": "the clinically relevant acquired-resistance tumor.", "drugs": [{"drug": "imatinib", "category": "multi_kinase", "bucket": "robust", "confidence": "medium", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -5.67, "affinity_mut": -7.96, "delta": -2.29, "ci95": [-6.39, 0.35]}, {"drug": "sunitinib", "category": "multi_kinase", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.56, "affinity_mut": -7.61, "delta": -0.05, "ci95": [-0.35, 0.3]}, {"drug": "propranolol", "category": "repurposing_candidate", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.65, "affinity_mut": -7.12, "delta": 0.53, "ci95": [0.37, 0.72]}, {"drug": "thalidomide", "category": "repurposing_candidate", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.21, "affinity_mut": -7.09, "delta": 0.13, "ci95": [-0.01, 0.28]}, {"drug": "simvastatin", "category": "repurposing_candidate", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -6.14, "affinity_mut": -6.93, "delta": -0.79, "ci95": [-1.32, -0.22]}, {"drug": "adagrasib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.15, "affinity_mut": -6.87, "delta": 0.28, "ci95": [-0.53, 1.26]}, {"drug": "afatinib", "category": "egfr_family", "bucket": "weakened", "confidence": "high", "reason": "significantly and meaningfully weaker on the mutant, though still above threshold", "affinity_wt": -8.04, "affinity_mut": -6.69, "delta": 1.35, "ci95": [1.27, 1.46]}, {"drug": "dacomitinib", "category": "egfr_family", "bucket": "weakened", "confidence": "high", "reason": "significantly and meaningfully weaker on the mutant, though still above threshold", "affinity_wt": -8.61, "affinity_mut": -6.66, "delta": 1.94, "ci95": [1.79, 2.03]}, {"drug": "osimertinib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -6.67, "affinity_mut": -6.65, "delta": 0.02, "ci95": [-0.33, 0.34]}, {"drug": "gefitinib", "category": "known_answer", "bucket": "weakened", "confidence": "high", "reason": "significantly and meaningfully weaker on the mutant, though still above threshold", "affinity_wt": -7.73, "affinity_mut": -6.53, "delta": 1.2, "ci95": [0.93, 1.46]}, {"drug": "doxycycline", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "significantly and meaningfully weaker on the mutant, though still above threshold", "affinity_wt": -7.67, "affinity_mut": -6.33, "delta": 1.34, "ci95": [0.29, 2.61]}, {"drug": "aspirin", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.25, "affinity_mut": -5.85, "delta": 0.4, "ci95": [0.2, 0.55]}, {"drug": "vandetanib", "category": "egfr_family", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -7.92, "affinity_mut": -5.48, "delta": 2.44, "ci95": [1.55, 3.87]}, {"drug": "crizotinib", "category": "multi_kinase", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -8.37, "affinity_mut": -5.34, "delta": 3.03, "ci95": [2.72, 3.25]}, {"drug": "erlotinib", "category": "known_answer", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -7.09, "affinity_mut": -5.22, "delta": 1.87, "ci95": [1.81, 1.93]}, {"drug": "sotorasib", "category": "known_answer", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.86, "affinity_mut": -4.98, "delta": 0.88, "ci95": [-0.6, 1.88]}, {"drug": "cimetidine", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.25, "affinity_mut": -4.74, "delta": 0.51, "ci95": [0.37, 0.66]}, {"drug": "dasatinib", "category": "multi_kinase", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -7.27, "affinity_mut": -4.57, "delta": 2.7, "ci95": [1.28, 4.7]}, {"drug": "disulfiram", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -4.34, "affinity_mut": -4.11, "delta": 0.23, "ci95": [-0.02, 0.54]}, {"drug": "metformin", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -3.52, "affinity_mut": -4.01, "delta": -0.49, "ci95": [-0.83, -0.31]}, {"drug": "divarasib", "category": "kras_family", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.41, "affinity_mut": -3.61, "delta": 2.8, "ci95": [0.2, 4.59]}, {"drug": "verapamil", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -7.2, "affinity_mut": -3.34, "delta": 3.85, "ci95": [2.21, 6.13]}, {"drug": "ponatinib", "category": "multi_kinase", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -7.21, "affinity_mut": -0.03, "delta": 7.18, "ci95": [2.11, 11.44]}, {"drug": "lapatinib", "category": "egfr_family", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -10.7, "affinity_mut": 0.23, "delta": 10.93, "ci95": [10.74, 11.11]}, {"drug": "sorafenib", "category": "multi_kinase", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -9.44, "affinity_mut": 0.92, "delta": 10.37, "ci95": [9.9, 10.89]}, {"drug": "neratinib", "category": "egfr_family", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -8.37, "affinity_mut": 1.27, "delta": 9.64, "ci95": [7.73, 10.49]}, {"drug": "itraconazole", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -4.69, "affinity_mut": 3.07, "delta": 7.76, "ci95": [6.54, 8.95]}]}, "KRAS G12C": {"mutation": "KRAS G12C", "target": "KRAS", "note": "apo (closed) pocket; non-covalent docking does not capture the covalent Cys12 selectivity that defines G12C drugs -- read with care.", "drugs": [{"drug": "doxycycline", "category": "repurposing_candidate", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.76, "affinity_mut": -7.39, "delta": 0.37, "ci95": [0.16, 0.49]}, {"drug": "vandetanib", "category": "egfr_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -6.2, "affinity_mut": -6.31, "delta": -0.12, "ci95": [-0.65, 0.4]}, {"drug": "ponatinib", "category": "multi_kinase", "bucket": "weakened", "confidence": "high", "reason": "significantly and meaningfully weaker on the mutant, though still above threshold", "affinity_wt": -7.86, "affinity_mut": -6.23, "delta": 1.63, "ci95": [0.83, 2.28]}, {"drug": "sotorasib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -6.76, "affinity_mut": -6.23, "delta": 0.53, "ci95": [0.03, 1.11]}, {"drug": "imatinib", "category": "multi_kinase", "bucket": "weakened", "confidence": "high", "reason": "significantly and meaningfully weaker on the mutant, though still above threshold", "affinity_wt": -7.16, "affinity_mut": -6.12, "delta": 1.04, "ci95": [0.51, 1.65]}, {"drug": "dacomitinib", "category": "egfr_family", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.7, "affinity_mut": -5.77, "delta": -0.07, "ci95": [-1.57, 0.75]}, {"drug": "simvastatin", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "low", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.14, "affinity_mut": -5.69, "delta": 0.45, "ci95": [-0.03, 1.01]}, {"drug": "itraconazole", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.24, "affinity_mut": -5.68, "delta": 0.56, "ci95": [0.17, 0.96]}, {"drug": "sunitinib", "category": "multi_kinase", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.76, "affinity_mut": -5.57, "delta": 1.2, "ci95": [0.74, 1.57]}, {"drug": "afatinib", "category": "egfr_family", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.04, "affinity_mut": -5.47, "delta": 0.56, "ci95": [0.27, 0.85]}, {"drug": "lapatinib", "category": "egfr_family", "bucket": "weakened", "confidence": "low", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.16, "affinity_mut": -5.32, "delta": 0.84, "ci95": [-0.17, 2.26]}, {"drug": "propranolol", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.41, "affinity_mut": -5.29, "delta": 0.12, "ci95": [-0.06, 0.32]}, {"drug": "thalidomide", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.27, "affinity_mut": -5.29, "delta": 0.98, "ci95": [0.73, 1.24]}, {"drug": "neratinib", "category": "egfr_family", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.1, "affinity_mut": -5.27, "delta": -0.17, "ci95": [-0.6, 0.19]}, {"drug": "crizotinib", "category": "multi_kinase", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.39, "affinity_mut": -5.24, "delta": 0.15, "ci95": [-0.42, 0.72]}, {"drug": "gefitinib", "category": "known_answer", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.89, "affinity_mut": -5.13, "delta": 0.77, "ci95": [0.46, 1.0]}, {"drug": "dasatinib", "category": "multi_kinase", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.53, "affinity_mut": -4.91, "delta": 0.62, "ci95": [0.15, 1.29]}, {"drug": "adagrasib", "category": "known_answer", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -7.01, "affinity_mut": -4.83, "delta": 2.18, "ci95": [1.41, 2.82]}, {"drug": "aspirin", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.41, "affinity_mut": -4.83, "delta": 0.57, "ci95": [0.46, 0.67]}, {"drug": "sorafenib", "category": "multi_kinase", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.41, "affinity_mut": -4.82, "delta": 1.59, "ci95": [0.17, 4.47]}, {"drug": "osimertinib", "category": "known_answer", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.11, "affinity_mut": -4.78, "delta": 0.32, "ci95": [0.08, 0.61]}, {"drug": "cimetidine", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -4.57, "affinity_mut": -4.72, "delta": -0.16, "ci95": [-0.38, 0.06]}, {"drug": "divarasib", "category": "kras_family", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.75, "affinity_mut": -4.47, "delta": 2.27, "ci95": [1.65, 2.93]}, {"drug": "erlotinib", "category": "known_answer", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.45, "affinity_mut": -4.46, "delta": 0.99, "ci95": [0.72, 1.24]}, {"drug": "verapamil", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -4.25, "affinity_mut": -4.28, "delta": -0.04, "ci95": [-0.82, 0.71]}, {"drug": "metformin", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -3.82, "affinity_mut": -4.11, "delta": -0.29, "ci95": [-0.53, -0.08]}, {"drug": "disulfiram", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -3.42, "affinity_mut": -3.26, "delta": 0.16, "ci95": [-0.08, 0.37]}]}, "KRAS G12C (drug-bound pocket)": {"mutation": "KRAS G12C (drug-bound pocket)", "target": "KRAS", "note": "switch-II pocket already opened by sotorasib; other drugs docked into this induced conformation are often unreliable.", "drugs": [{"drug": "divarasib", "category": "kras_family", "bucket": "improved", "confidence": "high", "reason": "binds meaningfully and significantly better on the mutant", "affinity_wt": -6.75, "affinity_mut": -8.85, "delta": -2.1, "ci95": [-2.42, -1.78]}, {"drug": "adagrasib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.01, "affinity_mut": -6.56, "delta": 0.46, "ci95": [-0.3, 1.25]}, {"drug": "afatinib", "category": "egfr_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -6.04, "affinity_mut": -6.48, "delta": -0.44, "ci95": [-0.89, 0.01]}, {"drug": "lapatinib", "category": "egfr_family", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -6.16, "affinity_mut": -6.16, "delta": 0.0, "ci95": [-0.84, 0.96]}, {"drug": "dacomitinib", "category": "egfr_family", "bucket": "robust", "confidence": "medium", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -5.7, "affinity_mut": -6.0, "delta": -0.3, "ci95": [-1.88, 0.51]}, {"drug": "sotorasib", "category": "known_answer", "bucket": "weakened", "confidence": "low", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.76, "affinity_mut": -5.81, "delta": 0.95, "ci95": [-0.44, 3.73]}, {"drug": "gefitinib", "category": "known_answer", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.89, "affinity_mut": -5.38, "delta": 0.51, "ci95": [-0.59, 2.4]}, {"drug": "vandetanib", "category": "egfr_family", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.2, "affinity_mut": -5.22, "delta": 0.97, "ci95": [0.18, 1.85]}, {"drug": "erlotinib", "category": "known_answer", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.45, "affinity_mut": -4.97, "delta": 0.48, "ci95": [-0.76, 2.66]}, {"drug": "neratinib", "category": "egfr_family", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -5.1, "affinity_mut": -4.83, "delta": 0.27, "ci95": [-0.38, 1.0]}, {"drug": "thalidomide", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.27, "affinity_mut": -4.4, "delta": 1.87, "ci95": [1.56, 2.23]}, {"drug": "propranolol", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -5.41, "affinity_mut": -3.44, "delta": 1.96, "ci95": [1.37, 2.79]}, {"drug": "aspirin", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -5.41, "affinity_mut": -2.98, "delta": 2.43, "ci95": [2.11, 2.71]}, {"drug": "simvastatin", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.14, "affinity_mut": -2.91, "delta": 3.23, "ci95": [0.91, 7.29]}, {"drug": "disulfiram", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -3.42, "affinity_mut": -2.05, "delta": 1.38, "ci95": [1.04, 1.77]}, {"drug": "metformin", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -3.82, "affinity_mut": -1.94, "delta": 1.88, "ci95": [1.51, 2.29]}, {"drug": "imatinib", "category": "multi_kinase", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -7.16, "affinity_mut": -1.77, "delta": 5.39, "ci95": [2.27, 8.71]}, {"drug": "dasatinib", "category": "multi_kinase", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -5.53, "affinity_mut": -1.71, "delta": 3.82, "ci95": [1.41, 8.48]}, {"drug": "osimertinib", "category": "known_answer", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -5.11, "affinity_mut": -1.4, "delta": 3.71, "ci95": [0.56, 10.24]}, {"drug": "crizotinib", "category": "multi_kinase", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -5.39, "affinity_mut": -0.61, "delta": 4.78, "ci95": [1.54, 10.5]}, {"drug": "verapamil", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -4.25, "affinity_mut": 0.89, "delta": 5.14, "ci95": [-0.09, 15.92]}, {"drug": "doxycycline", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -7.76, "affinity_mut": 1.6, "delta": 9.36, "ci95": [0.38, 31.05]}, {"drug": "cimetidine", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -4.57, "affinity_mut": 2.15, "delta": 6.71, "ci95": [2.46, 12.67]}, {"drug": "sunitinib", "category": "multi_kinase", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -6.76, "affinity_mut": 4.77, "delta": 11.53, "ci95": [4.87, 21.42]}, {"drug": "itraconazole", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -6.24, "affinity_mut": 7.57, "delta": 13.81, "ci95": [6.93, 23.06]}, {"drug": "ponatinib", "category": "multi_kinase", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -7.86, "affinity_mut": 11.24, "delta": 19.1, "ci95": [12.36, 25.25]}, {"drug": "sorafenib", "category": "multi_kinase", "bucket": "non-binder", "confidence": "low", "reason": "QC-unreliable pose (positive affinity or large minimization move)", "affinity_wt": -6.41, "affinity_mut": 20.62, "delta": 27.04, "ci95": [15.35, 41.74]}]}, "EGFR C797S": {"mutation": "EGFR C797S", "target": "EGFR", "note": "acquired resistance to osimertinib. Osimertinib binds Cys797 COVALENTLY, so non-covalent docking cannot capture the resistance this mutation causes -- read osimertinib here with the same caveat as KRAS G12C. Modeled structure (side-chain swap); lower confidence than a crystal.", "drugs": [{"drug": "lapatinib", "category": "egfr_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -10.7, "affinity_mut": -11.13, "delta": -0.43, "ci95": [-0.53, -0.35]}, {"drug": "dacomitinib", "category": "egfr_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -8.61, "affinity_mut": -8.51, "delta": 0.1, "ci95": [-0.19, 0.38]}, {"drug": "crizotinib", "category": "multi_kinase", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -8.37, "affinity_mut": -8.46, "delta": -0.09, "ci95": [-0.27, 0.1]}, {"drug": "sorafenib", "category": "multi_kinase", "bucket": "weakened", "confidence": "high", "reason": "significantly and meaningfully weaker on the mutant, though still above threshold", "affinity_wt": -9.44, "affinity_mut": -8.18, "delta": 1.26, "ci95": [0.1, 2.71]}, {"drug": "imatinib", "category": "multi_kinase", "bucket": "robust", "confidence": "medium", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -5.67, "affinity_mut": -8.06, "delta": -2.39, "ci95": [-6.49, 0.52]}, {"drug": "afatinib", "category": "egfr_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -8.04, "affinity_mut": -7.99, "delta": 0.05, "ci95": [-0.07, 0.16]}, {"drug": "gefitinib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.73, "affinity_mut": -7.83, "delta": -0.09, "ci95": [-0.31, 0.08]}, {"drug": "divarasib", "category": "kras_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -6.41, "affinity_mut": -7.76, "delta": -1.35, "ci95": [-3.81, 0.04]}, {"drug": "adagrasib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.15, "affinity_mut": -7.69, "delta": -0.54, "ci95": [-0.95, -0.18]}, {"drug": "vandetanib", "category": "egfr_family", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.92, "affinity_mut": -7.63, "delta": 0.29, "ci95": [-0.19, 0.78]}, {"drug": "sunitinib", "category": "multi_kinase", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.56, "affinity_mut": -7.59, "delta": -0.03, "ci95": [-0.5, 0.42]}, {"drug": "dasatinib", "category": "multi_kinase", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.27, "affinity_mut": -7.51, "delta": -0.24, "ci95": [-0.99, 0.51]}, {"drug": "propranolol", "category": "repurposing_candidate", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.65, "affinity_mut": -7.5, "delta": 0.15, "ci95": [0.04, 0.31]}, {"drug": "erlotinib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.09, "affinity_mut": -7.14, "delta": -0.05, "ci95": [-0.18, 0.04]}, {"drug": "itraconazole", "category": "repurposing_candidate", "bucket": "improved", "confidence": "high", "reason": "binds meaningfully and significantly better on the mutant", "affinity_wt": -4.69, "affinity_mut": -7.1, "delta": -2.41, "ci95": [-4.13, -0.65]}, {"drug": "osimertinib", "category": "known_answer", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -6.67, "affinity_mut": -7.06, "delta": -0.39, "ci95": [-0.76, -0.08]}, {"drug": "thalidomide", "category": "repurposing_candidate", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.21, "affinity_mut": -6.87, "delta": 0.34, "ci95": [0.19, 0.49]}, {"drug": "neratinib", "category": "egfr_family", "bucket": "weakened", "confidence": "high", "reason": "significantly and meaningfully weaker on the mutant, though still above threshold", "affinity_wt": -8.37, "affinity_mut": -6.69, "delta": 1.68, "ci95": [1.46, 1.86]}, {"drug": "verapamil", "category": "repurposing_candidate", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -7.2, "affinity_mut": -6.62, "delta": 0.58, "ci95": [0.23, 1.05]}, {"drug": "aspirin", "category": "repurposing_candidate", "bucket": "robust", "confidence": "high", "reason": "binds the mutant with no meaningful weakening vs wild-type", "affinity_wt": -6.25, "affinity_mut": -6.15, "delta": 0.09, "ci95": [-0.04, 0.27]}, {"drug": "cimetidine", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.25, "affinity_mut": -5.42, "delta": -0.17, "ci95": [-0.26, -0.06]}, {"drug": "sotorasib", "category": "known_answer", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -5.86, "affinity_mut": -4.99, "delta": 0.87, "ci95": [-0.84, 2.61]}, {"drug": "simvastatin", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -6.14, "affinity_mut": -4.9, "delta": 1.24, "ci95": [0.83, 1.73]}, {"drug": "disulfiram", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -4.34, "affinity_mut": -4.09, "delta": 0.25, "ci95": [0.02, 0.45]}, {"drug": "metformin", "category": "repurposing_candidate", "bucket": "non-binder", "confidence": "high", "reason": "does not bind either the wild-type or the mutant", "affinity_wt": -3.52, "affinity_mut": -3.45, "delta": 0.07, "ci95": [-0.29, 0.36]}, {"drug": "ponatinib", "category": "multi_kinase", "bucket": "weakened", "confidence": "low", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -7.21, "affinity_mut": -2.5, "delta": 4.71, "ci95": [-1.22, 11.0]}, {"drug": "doxycycline", "category": "repurposing_candidate", "bucket": "weakened", "confidence": "high", "reason": "binds the wild-type but drops below the binding threshold on the mutant", "affinity_wt": -7.67, "affinity_mut": -0.97, "delta": 6.7, "ci95": [4.95, 8.06]}]}}, "validation": {"EGFR L858R+T790M": "Recovers the acquired-resistance signature: erlotinib and gefitinib lose binding on the double mutant (credible intervals exclude zero), while osimertinib \u2014 the third-generation drug designed to defeat T790M \u2014 holds. This is the known clinical picture, reproduced from docking alone.", "EGFR L858R": "The activating mutation that makes tumors sensitive to first-generation EGFR inhibitors. Used here as the treatment-naive baseline the resistance case is measured against.", "EGFR T790M": "Single-gatekeeper view. Clinically T790M co-occurs with L858R, so the double mutant gives the reliable resistance read \u2014 this single-variant structure is the muddier one.", "KRAS G12C": "Honest limitation on display: non-covalent docking cannot capture the covalent Cys12 bond that defines the G12C drugs, so sotorasib / adagrasib / divarasib numbers are unreliable in both directions. Shown as a caveat, never as a finding."}, "tcga": [{"sample_id": "TCGA-17-Z047-01", "n_mutations": 28, "in_scope_variants": ["EGFR L858R"], "matched_genotypes": ["EGFR L858R"], "primary_genotype": "EGFR L858R", "source": "cBioPortal public API \u2014 TCGA Lung Adenocarcinoma (PanCancer Atlas 2018)"}, {"sample_id": "TCGA-49-4490-01", "n_mutations": 48, "in_scope_variants": ["EGFR L858R"], "matched_genotypes": ["EGFR L858R"], "primary_genotype": "EGFR L858R", "source": "cBioPortal public API \u2014 TCGA Lung Adenocarcinoma (PanCancer Atlas 2018)"}, {"sample_id": "TCGA-50-5944-01", "n_mutations": 54, "in_scope_variants": ["EGFR L858R"], "matched_genotypes": ["EGFR L858R"], "primary_genotype": "EGFR L858R", "source": "cBioPortal public API \u2014 TCGA Lung Adenocarcinoma (PanCancer Atlas 2018)"}, {"sample_id": "TCGA-55-8096-01", "n_mutations": 132, "in_scope_variants": ["EGFR L858R"], "matched_genotypes": ["EGFR L858R"], "primary_genotype": "EGFR L858R", "source": "cBioPortal public API \u2014 TCGA Lung Adenocarcinoma (PanCancer Atlas 2018)"}, {"sample_id": "TCGA-L9-A50W-01", "n_mutations": 31, "in_scope_variants": ["EGFR L858R", "EGFR T790M"], "matched_genotypes": ["EGFR L858R+T790M", "EGFR L858R", "EGFR T790M"], "primary_genotype": "EGFR L858R+T790M", "source": "cBioPortal public API \u2014 TCGA Lung Adenocarcinoma (PanCancer Atlas 2018)"}, {"sample_id": "TCGA-49-4494-01", "n_mutations": 171, "in_scope_variants": ["EGFR L858R", "EGFR T790M"], "matched_genotypes": ["EGFR L858R+T790M", "EGFR L858R", "EGFR T790M"], "primary_genotype": "EGFR L858R+T790M", "source": "cBioPortal public API \u2014 TCGA Lung Adenocarcinoma (PanCancer Atlas 2018)"}, {"sample_id": "TCGA-05-4244-01", "n_mutations": 192, "in_scope_variants": ["KRAS G12C"], "matched_genotypes": ["KRAS G12C"], "primary_genotype": "KRAS G12C", "source": "cBioPortal public API \u2014 TCGA Lung Adenocarcinoma (PanCancer Atlas 2018)"}, {"sample_id": "TCGA-05-4249-01", "n_mutations": 300, "in_scope_variants": ["KRAS G12C"], "matched_genotypes": ["KRAS G12C"], "primary_genotype": "KRAS G12C", "source": "cBioPortal public API \u2014 TCGA Lung Adenocarcinoma (PanCancer Atlas 2018)"}, {"sample_id": "TCGA-05-4250-01", "n_mutations": 312, "in_scope_variants": ["KRAS G12C"], "matched_genotypes": ["KRAS G12C"], "primary_genotype": "KRAS G12C", "source": "cBioPortal public API \u2014 TCGA Lung Adenocarcinoma (PanCancer Atlas 2018)"}], "claude_reads": {"EGFR L858R+T790M": "## What this genotype is\n\nEGFR L858R+T790M is the clinically real acquired-resistance double mutant. L858R first makes the tumor sensitive to EGFR drugs; then T790M appears under treatment and blocks them. It is the genotype the resistance story turns on.\n\n## What to avoid\n\nThe first- and second-generation EGFR drugs lose their grip, with confident intervals: erlotinib (\u0394 +1.87), gefitinib (+1.20), afatinib (+1.35), dacomitinib (+1.94). This is why they fail once T790M appears.\n\n## Signal vs. artifact\n\nDocking flags several drugs as still binding, but a robust score is not the same as a real interaction. Weighing each by mechanism:\n\n- **Osimertinib** (\u0394 +0.02): believe this. It is the third-generation drug engineered against T790M, and the tool independently recovers that it holds. Mechanism and score agree.\n- **Imatinib** (\u0394 -2.29, medium confidence): interesting but softer here. A leukemia (CML) kinase inhibitor predicted to gain binding. Docking a kinase inhibitor against a kinase is legitimate, and this matches its behavior on the single mutants, but the interval on the double grazes zero. Carry it as a hypothesis, not a result.\n- **Simvastatin, propranolol, thalidomide**: likely artifacts. Their mechanisms (a statin, a beta-blocker, an immunomodulator) have nothing to do with EGFR, so the better-binding scores are coincidental.\n\n## Bottom line\n\nThe one mechanistically credible option here is osimertinib, which is what the clinic uses. The eye-catching repurposing candidates do not survive scrutiny. The signal worth remembering is imatinib, cleaner on the single T790M structure. Flagging the artifacts out is the point: it saves the bench work. Docking is a proxy for binding, not a measured Kd or clinical efficacy.", "EGFR T790M": "## What this genotype is\n\nEGFR T790M is the classic gatekeeper resistance mutation. It reshapes the ATP pocket so first-generation EGFR drugs lose their grip. Clinically it almost always co-occurs with L858R, so the double mutant gives the most reliable read and this single-variant structure is the muddier one. But it is where the most interesting repurposing signal appears.\n\n## The one hit that survives scrutiny\n\nMost of the still-binding rows are unremarkable or artifacts. Two stand out for the right reason:\n\n- **Imatinib** (\u0394 -3.98, interval excludes zero) and **dasatinib** (\u0394 -1.48): the credible, non-obvious hit. Both are approved kinase inhibitors for CML, and both are predicted to bind the T790M gatekeeper pocket better than wild-type EGFR. Because they are kinase inhibitors, docking them against EGFR is mechanistically legitimate, unlike a statin or a beta-blocker. Neither is used for EGFR lung cancer, so this is a genuine, testable cross-kinase hypothesis: the altered pocket may fit a different inhibitor scaffold. The magnitude is uncertain (wide interval); the direction is confident.\n- **Itraconazole** (\u0394 -1.83): improves too, but as an antifungal its mechanism does not involve EGFR, so it is a weaker bet than the kinase inhibitors.\n- **Propranolol, thalidomide**: artifacts, with mechanisms unrelated to EGFR.\n\n## Bottom line\n\nStripped of the coincidences, T790M yields one genuinely interesting lead: imatinib, backed by dasatinib. Leukemia kinase inhibitors predicted to gain binding on the resistant gatekeeper is exactly the kind of non-obvious, mechanistically coherent hypothesis worth a wet-lab test. It is the sort of thing docking plus review can surface that a raw score list would bury among coincidences. Docking is a proxy, and this is a hypothesis, not a result.", "EGFR L858R": "## What this genotype is\n\nEGFR L858R is the sensitizing mutation, the activating change that makes lung tumors respond to first-generation EGFR inhibitors in the first place. So this is the drug-sensitive baseline, not a resistance case: erlotinib, gefitinib, afatinib and the other EGFR-family drugs still bind here. It is most useful as the comparison point for what resistance later takes away.\n\n## Signal vs. artifact\n\nThe drugs predicted to bind L858R better than wild-type are not equal:\n\n- **Imatinib** (\u0394 -2.65) and **ponatinib** (\u0394 -3.30): worth a look. Both are approved kinase inhibitors, so docking them against a kinase like EGFR is mechanistically meaningful. Neither is used for EGFR lung cancer, which makes this a non-obvious cross-kinase hypothesis. Imatinib in particular gains binding consistently across every EGFR mutant tested, which is what separates a real signal from noise.\n- **Itraconazole** (\u0394 -3.15): less credible. An antifungal whose cancer activity runs through other pathways, not EGFR, so a strong EGFR score is more likely coincidental.\n- **Thalidomide, verapamil, simvastatin**: artifacts for this target, with mechanisms unrelated to EGFR.\n\n## Bottom line\n\nAs expected, the EGFR-family drugs bind the sensitizing mutant. This is the baseline the resistance cases are measured against. The hypothesis worth carrying forward is that kinase inhibitors from other cancers, imatinib and ponatinib, gain EGFR binding: non-obvious, mechanistically coherent, and testable. Docking is a proxy, not a measured Kd.", "KRAS G12C": "## What this genotype is\n\nKRAS G12C is a major lung and colorectal driver, and an honest stress test for this tool. The approved G12C drugs (sotorasib, adagrasib, divarasib) work by forming a permanent covalent bond to the mutant cysteine. Non-covalent docking cannot model that bond, so the numbers for those drugs are unreliable in both directions.\n\n## Read with the covalent caveat\n\n- **Sotorasib, adagrasib, divarasib**: do not read these as real signals. A non-covalent score cannot capture the covalent selectivity that makes them work, so the tool is blind to their actual mechanism here. This is a limitation shown honestly, not a finding.\n- **Doxycycline** (\u0394 +0.37): an artifact. An antibiotic whose cancer-adjacent activity is unrelated to the KRAS switch-II pocket.\n- **Vandetanib** (\u0394 -0.12): a kinase inhibitor giving a weak, uninformative score against KRAS.\n\n## Bottom line\n\nThe honest answer here is a null. Because the real G12C drugs act covalently, non-covalent docking has little to say, and nothing in the panel is a credible non-covalent lead. That is worth stating plainly: knowing when the method does not apply is part of using it well. A covalent-docking backend would be the right tool for G12C, which is a documented next step.", "TCGA-L9-A50W-01": "## What this tumor is\n\nTCGA-L9-A50W-01 is a real, de-identified TCGA lung adenocarcinoma sample with 31 somatic mutations. Two fall inside this tool's panel, EGFR L858R and EGFR T790M, and it carries both. That is the classic acquired-resistance genotype: L858R made the tumor sensitive to first-generation EGFR drugs, and T790M is the gatekeeper mutation that appears after treatment and blocks them. So the tool triages it as the double mutant. The other 29 mutations are out of scope: this is a narrow EGFR lens on a more complex tumor.\n\n## What to avoid\n\nThese bind normal EGFR but lose grip on this mutant, and the biology agrees: erlotinib (\u0394 +1.87), gefitinib (+1.20), afatinib (+1.35), dacomitinib (+1.94). T790M is why these fail in the clinic.\n\n## Signal vs. artifact\n\nA robust score is not a real interaction. Weighing each by mechanism:\n\n- **Osimertinib** (\u0394 +0.02): believe this. The third-generation drug engineered to bind T790M-mutant EGFR, and the tool recovers that it holds.\n- **Imatinib** (\u0394 -2.29): the non-obvious one to watch. A leukemia kinase inhibitor predicted to gain binding. Because it is a kinase inhibitor, docking it against EGFR is legitimate, and it gains binding consistently across the EGFR mutants. A real, testable cross-kinase hypothesis, though the interval here is wide.\n- **Simvastatin** (\u0394 -0.79), propranolol, thalidomide: likely artifacts. Their mechanisms have nothing to do with EGFR: real drugs, wrong target.\n\n## Bottom line\n\nStrip out the coincidental scores and the read is clean. The one mechanistically credible option is osimertinib, what the clinic uses, and the one non-obvious lead worth a bench test is imatinib, a kinase inhibitor rather than a statin. The eye-catching repurposing candidates do not survive scrutiny against EGFR. Flagging them out is the point: it saves the bench work. Docking is a proxy for binding, not a Kd or clinical efficacy.", "EGFR C797S": "## What this genotype is\n\nEGFR C797S is the resistance mutation that defeats osimertinib, the third-generation drug that was itself the answer to T790M. It is the current frontier of EGFR resistance. This structure was modeled by side-chain swap from the wild-type, so read it a notch below the crystal-structure cases.\n\n## The critical caveat: a covalent blind spot\n\nOsimertinib kills EGFR by forming a permanent covalent bond to cysteine 797. C797S replaces that cysteine with serine, so the bond cannot form, and that is why it causes resistance. But this tool docks non-covalently, so it is blind to exactly that mechanism. On the numbers osimertinib even looks like it still binds (\u0394 -0.39), which is wrong in the way that matters. This is the same limitation the tool has for KRAS G12C. So do not read the osimertinib number here as still working. The tool cannot call C797S resistance, and it says so. A covalent-docking backend is the right instrument, and a documented next step.\n\n## The one signal that carries over\n\n- **Imatinib** (\u0394 -2.39, medium confidence): the cross-kinase hypothesis holds directionally here too. Imatinib now gains binding on all four EGFR mutants tested (L858R, T790M, the double, and C797S), four for four. That consistency across independent structures is what separates a real signal from a fluke, and it is why it is worth a wet-lab test. On C797S the interval is wide, so it is the softest of the four: a hypothesis, not a result.\n- **Itraconazole** (\u0394 -2.41): an antifungal whose mechanism does not involve EGFR, so lower credibility than the kinase inhibitor.\n\n## Bottom line\n\nRun on a mutation it had never seen, the tool did two honest things: it flagged its own blind spot, since osimertinib resistance here is covalent and non-covalent docking cannot see it, and it added a fourth consistent data point to the imatinib hypothesis. Knowing where a method fails is as valuable as any hit. Docking is a proxy, and this is pre-wet-lab triage, not treatment advice.", "__model": "Claude Sonnet 5"}, "n_drugs": 27};
+const [DMIN, DMAX] = DATA.domain;
+const ORDER = ["weakened","robust","improved","non-binder"];
+const BMETA = {
+  "weakened":  {label:"Weakened — avoid",         desc:"loses binding on the mutant",            cvar:"--c-weakened"},
+  "robust":    {label:"Robust — safe bet",        desc:"binding holds on the mutant",            cvar:"--c-robust"},
+  "improved":  {label:"Improved",                 desc:"binds better on the mutant (rare)",      cvar:"--c-improved"},
+  "non-binder":{label:"Non-binder / unreliable",  desc:"no binding either state, or QC-flagged", cvar:"--c-nonbinder"},
+};
+const xPct = v => (Math.max(DMIN,Math.min(DMAX,v)) - DMIN)/(DMAX-DMIN)*100;
+const esc = s => String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+const $ = id => document.getElementById(id);
+const $cancer=$("cancer"), $mut=$("mutation"), $tcga=$("tcga"), $chart=$("chart"),
+      $tip=$("tip"), $foot=$("foot");
+let curTumor=null;
+
+for(const c of Object.keys(DATA.cancer_types)){
+  const o=document.createElement("option"); o.value=c; o.textContent=c; $cancer.appendChild(o);
+}
+for(const t of DATA.tcga){
+  const b=document.createElement("button"); b.className="tumor-btn"; b.dataset.id=t.sample_id;
+  b.textContent=t.sample_id+"  ("+t.in_scope_variants.join(", ")+")";
+  b.onclick=()=>loadTumor(t);
+  $tcga.appendChild(b);
+}
+function fillMutations(cancer){
+  $mut.innerHTML="";
+  for(const m of DATA.cancer_types[cancer]){
+    const o=document.createElement("option"); o.value=m; o.textContent=m; $mut.appendChild(o);
+  }
+}
+$cancer.onchange=()=>{ curTumor=null; fillMutations($cancer.value); render($mut.value); };
+$mut.onchange=()=>{ curTumor=null; render($mut.value); };
+
+function loadTumor(t){
+  curTumor=t;
+  const label=t.primary_genotype;
+  for(const c of Object.keys(DATA.cancer_types)){
+    if(DATA.cancer_types[c].includes(label)){ $cancer.value=c; fillMutations(c); $mut.value=label; break; }
+  }
+  render(label);
+}
+
+// ---- verdict ----
+function renderVerdict(T){
+  const by=b=>T.drugs.filter(d=>d.bucket===b);
+  const weak=by("weakened"), rob=by("robust"), imp=by("improved");
+  const leads=rob.filter(d=>d.category==="repurposing_candidate");
+  $("genotype").innerHTML = esc(T.mutation)+' <span class="tgt">· target '+esc(T.target)+'</span>';
+  const nm = arr => arr.slice(0,3).map(d=>esc(d.drug)).join(", ")+(arr.length>3?", …":"");
+  const tiles=[
+    {c:"w",n:weak.length,k:"Avoid",names: weak.length?nm(weak):"none"},
+    {c:"r",n:rob.length, k:"Still binds",names: rob.length?nm(rob):"none"},
+    {c:"h",n:leads.length,k:"To review",names: leads.length?nm(leads):"none"},
+  ];
+  $("tiles").innerHTML = tiles.map(t=>
+    `<div class="tile ${t.c}"><div class="n">${t.n}</div><div class="k">${t.k}</div>`+
+    `<div class="names">${t.names}</div></div>`).join("");
+  let line=`Docking flags <b>${weak.length}</b> drug${weak.length!=1?"s":""} that lose grip on this mutation `+
+    `and <b>${rob.length}</b> that hold — but a robust docking score isn't automatically a real hit. `;
+  if(leads.length) line+=`<b>${leads.length}</b> are approved non-oncology drugs `+
+    `(${nm(leads)}); the mechanistic review below weighs which are believable and which are likely artifacts.`;
+  $("verdictLine").innerHTML=line;
+}
+
+// ---- badges ----
+function renderBadges(T){
+  const out=[];
+  if(curTumor){
+    out.push(`<div class="badge real"><span class="ic">&#9679;</span><span class="bt">`+
+      `<b>Real patient tumor.</b> ${esc(curTumor.sample_id)} — a de-identified TCGA lung-adenocarcinoma sample `+
+      `with ${curTumor.n_mutations} somatic mutations, never seen by the tool. In-scope: <b>${esc(curTumor.in_scope_variants.join(", "))}</b>; `+
+      `most of the tumor is outside the panel. Source: cBioPortal, TCGA PanCancer Atlas 2018.</span></div>`);
+  }
+  const v=DATA.validation[T.mutation];
+  if(v){
+    const isCaveat = T.mutation.startsWith("KRAS");
+    out.push(`<div class="badge ${isCaveat?"caveat":"valid"}"><span class="ic">${isCaveat?"!":"&#10003;"}</span>`+
+      `<span class="bt"><b>${isCaveat?"Known limitation.":"Reproduces known biology."}</b> ${esc(v)}</span></div>`);
+  }
+  $("badges").innerHTML=out.join("");
+  $("badgeSec").style.display = out.length?"":"none";
+}
+
+// ---- chart ----
+function ciBar(r){
+  const c=`var(${BMETA[r.bucket].cvar})`;
+  const lo=xPct(r.ci95[0]), hi=xPct(r.ci95[1]), d=xPct(r.delta), z=xPct(0);
+  const t1=xPct(-DATA.thresholds.delta_meaningful), t2=xPct(DATA.thresholds.delta_meaningful);
+  let over="";
+  if(r.delta>DMAX) over=`<span class="chev" style="left:calc(100% - 11px);color:${c}">&rsaquo;</span>`;
+  if(r.delta<DMIN) over=`<span class="chev" style="left:2px;color:${c}">&lsaquo;</span>`;
+  return `<div class="track">
+    <span class="zero" style="left:${z}%"></span>
+    <span class="ci" style="left:${lo}%;width:${Math.max(hi-lo,0.7)}%;background:${c}"></span>
+    <span class="dot" style="left:${d}%;background:${c}"></span>${over}</div>`;
+}
+function renderChart(T){
+  let html="";
+  for(const bucket of ORDER){
+    const rows=T.drugs.filter(d=>d.bucket===bucket);
+    if(!rows.length) continue;
+    const m=BMETA[bucket];
+    html+=`<div class="bucket b-${bucket}"><div class="bhead"><span class="sw" style="background:var(${m.cvar})"></span>`+
+      `${m.label}<span class="desc">&mdash; ${m.desc}</span><span class="ct">${rows.length} drug${rows.length>1?"s":""}</span></div>`+
+      `<table class="rows"><tbody>`;
+    for(const r of rows){
+      const dsign=(r.delta>=0?"+":"")+r.delta.toFixed(2);
+      const bench = r.category==="known_answer" ? '<span class="bench" title="clinical benchmark drug">benchmark</span>' : "";
+      html+=`<tr data-tip="<b>${esc(r.drug)}</b>: ${esc(r.reason)}.<br>WT ${r.affinity_wt}, mutant ${r.affinity_mut} kcal/mol · &Delta; ${dsign} [95% CI ${r.ci95[0].toFixed(2)}, ${r.ci95[1].toFixed(2)}] · ${r.confidence} confidence.">`+
+        `<td style="width:150px"><span class="dname">${esc(r.drug)}${bench}</span><span class="cat">${esc(r.category)}</span></td>`+
+        `<td>${ciBar(r)}</td>`+
+        `<td class="num" style="width:56px">${dsign}</td>`+
+        `<td class="ci-txt" style="width:98px">[${r.ci95[0].toFixed(2)}, ${r.ci95[1].toFixed(2)}]</td>`+
+        `<td class="conf ${r.confidence} num" style="width:58px">${r.confidence}</td></tr>`;
+    }
+    html+=`</tbody></table></div>`;
+  }
+  $chart.innerHTML=html;
+  attachTips();
+}
+
+// ---- claude read ----
+function mdToHtml(md){
+  const lines=md.split("\n"); let html="", inList=false;
+  const inline=s=>esc(s).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+  for(let ln of lines){
+    ln=ln.replace(/\r$/,"");
+    if(/^#{1,6}\s/.test(ln)){ if(inList){html+="</ul>";inList=false;} html+="<h4>"+inline(ln.replace(/^#+\s/,""))+"</h4>"; }
+    else if(/^\s*[-*]\s/.test(ln)){ if(!inList){html+="<ul>";inList=true;} html+="<li>"+inline(ln.replace(/^\s*[-*]\s/,""))+"</li>"; }
+    else if(ln.trim()===""){ if(inList){html+="</ul>";inList=false;} }
+    else { if(inList){html+="</ul>";inList=false;} html+="<p style='margin:8px 0'>"+inline(ln)+"</p>"; }
+  }
+  if(inList)html+="</ul>";
+  return html;
+}
+function renderClaude(T){
+  const key = curTumor ? (DATA.claude_reads[curTumor.sample_id] ? curTumor.sample_id : T.mutation) : T.mutation;
+  const read = DATA.claude_reads[key];
+  const model = DATA.claude_reads.__model || "Claude";
+  if(read){
+    $("claude").innerHTML =
+      `<div class="ch"><span class="dot2"></span><b>Claude's interpretation</b>`+
+      `<span class="tag">${esc(model)} · cached</span></div>`+
+      `<div class="body">${mdToHtml(read)}</div>`;
+  } else {
+    $("claude").innerHTML =
+      `<div class="ch"><span class="dot2"></span><b>Claude's interpretation</b><span class="tag">not cached</span></div>`+
+      `<div class="empty">Claude reads these same numbers live and returns a plain-English verdict. `+
+      `Generate the cached reads for the demo with <code>python src/cache_claude_reads.py</code> `+
+      `(uses your API key once), or ask it live via <code>python src/interpret.py</code> or the MCP server.</div>`;
+  }
+}
+
+// ---- hover tooltips ----
+function attachTips(){
+  for(const tr of $chart.querySelectorAll("tr[data-tip]")){
+    tr.onmousemove=e=>{ $tip.innerHTML=tr.dataset.tip; $tip.style.opacity="1";
+      let x=e.clientX+14, y=e.clientY+16;
+      if(x+312>innerWidth) x=e.clientX-300;
+      if(y+90>innerHeight) y=e.clientY-90;
+      $tip.style.left=x+"px"; $tip.style.top=y+"px"; };
+    tr.onmouseleave=()=>{ $tip.style.opacity="0"; };
+  }
+}
+
+function render(label){
+  const T=DATA.mutations[label];
+  if(!T) return;
+  document.querySelectorAll(".tumor-btn").forEach(b=>b.classList.toggle("active", !!curTumor && b.dataset.id===curTumor.sample_id));
+  renderVerdict(T); renderBadges(T); renderChart(T); renderClaude(T);
+  $foot.textContent="Target "+T.target+" · Δ = mutant − wild-type affinity (kcal/mol); more negative binds stronger. "+
+    "A credible interval that excludes zero is a confident call; one that straddles zero is not. "+
+    "Docking affinity is a proxy, not a measured Kd or clinical efficacy — this is pre-wet-lab triage, "+
+    "not treatment advice. Robust repurposing hits are hypotheses for wet-lab follow-up, never discoveries. "+
+    "Data generated "+DATA.generated+" over "+DATA.n_drugs+" approved drugs.";
+}
+
+const first=Object.keys(DATA.cancer_types)[0];
+$cancer.value=first; fillMutations(first); render($mut.value);
+</script>
+</body>
+</html>

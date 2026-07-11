@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MutationRx — mutation-aware drug-repurposing triage</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="app">
+  <!-- sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="7" r="3.1" fill="currentColor"/>
+          <circle cx="7" cy="22" r="3.1" fill="currentColor"/>
+          <circle cx="25" cy="22" r="3.1" fill="currentColor"/>
+          <circle cx="16" cy="16" r="2.2" fill="currentColor" opacity=".55"/>
+          <path d="M16 9.5v4M14 15l-5 5M18 15l5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="nm">MutationRx</div>
+        <div class="tg">resistance-aware drug triage</div>
+      </div>
+    </div>
+
+    <button class="newbtn" id="newBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      New triage
+    </button>
+    <button class="methodbtn" id="whyBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>
+      Why it matters
+    </button>
+    <button class="methodbtn" id="methodBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5l9 4.5 9-4.5"/></svg>
+      Methodology &amp; the science
+    </button>
+
+    <div class="side-scroll">
+      <div class="side-group">
+        <div class="side-h">Real patient tumors</div>
+        <div class="chips" id="tumorChips"></div>
+      </div>
+      <div class="side-group">
+        <div class="side-h">Reference genotypes</div>
+        <div class="chips" id="geneChips"></div>
+      </div>
+    </div>
+
+    <div class="side-foot">
+      <div class="usage" title="On-demand GPU compute">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9zM9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg>
+        <span id="usageText">GPU not connected</span>
+        <span class="bar"><i id="usageBar" style="width:0%"></i></span>
+      </div>
+      <div class="foot-links">
+        <a href="/static/dashboard.html" id="dashLink" target="_blank" rel="noopener">Static report</a>
+        <a href="https://www.cbioportal.org/" target="_blank" rel="noopener">cBioPortal</a>
+        <button class="themebtn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- main workspace -->
+  <main class="main">
+    <div class="mainwrap">
+      <form class="ask" id="askForm" autocomplete="off">
+        <div class="field">
+          <svg class="ask-ic" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          <input id="query" placeholder="Ask about a tumor.  e.g.  EGFR L858R+T790M   or   EGFR G719S" aria-label="Tumor mutation">
+          <div class="suggest" id="suggest" hidden></div>
+        </div>
+        <button class="go" type="submit" id="goBtn">Triage</button>
+      </form>
+      <div class="hint" id="askHint">Type a target + point mutation, pick a reference genotype, or load a real patient tumor from the left.</div>
+
+      <div id="workspace"></div>
+    </div>
+  </main>
+</div>
+<div class="tip" id="tip"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

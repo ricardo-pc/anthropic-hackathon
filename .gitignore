@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .venv/
+.claude/
 
 # Claude Science export zips duplicate the loose files already in the same folder
 claude-science/**/*.zip

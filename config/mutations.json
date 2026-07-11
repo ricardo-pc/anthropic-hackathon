@@ -1,0 +1,53 @@
+{
+  "_comment": "The tumor registry the triage engine runs on. Add your own genotype here to make it appear in the tool \u2014 no code changes. Each mutation maps a label to its target protein, a wild-type reference structure (wt) and the mutant structure (mut), both as PDB IDs that must have docking scores in data/gnina_scores_replicates.csv. See docs/bring_your_own_tumor.md. Validate an entry with: python src/check_registry.py \"<label>\". triage.py falls back to built-in defaults if this file is missing.",
+  "mutations": {
+    "EGFR L858R": {
+      "target": "EGFR",
+      "wt": "3POZ",
+      "mut": "8A2B"
+    },
+    "EGFR T790M": {
+      "target": "EGFR",
+      "wt": "3POZ",
+      "mut": "4I24",
+      "note": "single T790M; clinically T790M usually co-occurs with L858R -- see 'EGFR L858R+T790M', which is the resistant tumor and gives the reliable read."
+    },
+    "EGFR L858R+T790M": {
+      "target": "EGFR",
+      "wt": "3POZ",
+      "mut": "5UGC",
+      "note": "the clinically relevant acquired-resistance tumor."
+    },
+    "KRAS G12C": {
+      "target": "KRAS",
+      "wt": "8FMI",
+      "mut": "4LDJ",
+      "note": "apo (closed) pocket; non-covalent docking does not capture the covalent Cys12 selectivity that defines G12C drugs -- read with care."
+    },
+    "KRAS G12C (drug-bound pocket)": {
+      "target": "KRAS",
+      "wt": "8FMI",
+      "mut": "6OIM",
+      "note": "switch-II pocket already opened by sotorasib; other drugs docked into this induced conformation are often unreliable."
+    },
+    "EGFR C797S": {
+      "target": "EGFR",
+      "wt": "3POZ",
+      "mut": "EGFRC797S",
+      "note": "acquired resistance to osimertinib. Osimertinib binds Cys797 COVALENTLY, so non-covalent docking cannot capture the resistance this mutation causes -- read osimertinib here with the same caveat as KRAS G12C. Modeled structure (side-chain swap); lower confidence than a crystal.",
+      "modeled": true
+    }
+  },
+  "cancer_types": {
+    "lung cancer": [
+      "EGFR L858R",
+      "EGFR T790M",
+      "EGFR L858R+T790M",
+      "KRAS G12C",
+      "EGFR C797S"
+    ],
+    "colorectal cancer": [
+      "KRAS G12C"
+    ]
+  }
+}

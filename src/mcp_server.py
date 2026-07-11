@@ -18,6 +18,7 @@ from mcp.server.fastmcp import FastMCP
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import triage  # noqa: E402
+import tcga  # noqa: E402
 
 mcp = FastMCP("onco-triage")
 
@@ -34,6 +35,13 @@ def triage_tumor(mutation: str) -> str:
     Interpretation guardrails (apply these when explaining the result to the user):
     - Affinity is a docking PROXY, not a measured Kd and not clinical efficacy.
     - A credible interval that excludes zero is a confident call; one that straddles zero is not.
+    - YOUR KEY JOB is to separate real signal from docking artifact. Docking will score drugs that have
+      no business binding this target. For each notable 'robust'/repurposing hit, weigh mechanistic
+      plausibility from what you know: is this drug's real mechanism related to this target, or is the
+      score coincidental? Many old drugs (thalidomide, propranolol, statins, metformin) have genuine
+      cancer-repurposing literature but via mechanisms UNRELATED to the docked target — that does not
+      validate the docking hit. Sort hits into "believe this / worth an assay" vs "likely artifact /
+      skip", with a reason. Flagging an artifact is as useful as endorsing a hit.
     - 'robust' repurposing candidates are HYPOTHESES for wet-lab follow-up, never discoveries.
     - Heed the 'note': for KRAS G12C, non-covalent docking cannot capture the covalent mechanism, so
       results for the covalent G12C drugs (sotorasib/adagrasib/divarasib) are unreliable in either
@@ -67,6 +75,43 @@ def mutations_for_cancer(cancer_type: str) -> str:
         return json.dumps(muts)
     return json.dumps({"error": f"no in-scope mutations for {cancer_type!r}",
                        "known_cancer_types": list(triage.CANCER_TYPES)})
+
+
+@mcp.tool()
+def list_tcga_tumors() -> str:
+    """List the cached real, de-identified TCGA Lung Adenocarcinoma tumors available to triage.
+
+    Each entry has a sample_id (a de-identified TCGA barcode), a one-line descriptor, and the somatic
+    mutation count. Pass a sample_id to triage_tcga_profile to run the tool on that real tumor.
+    """
+    return json.dumps(tcga.list_samples())
+
+
+@mcp.tool()
+def triage_tcga_profile(sample_id: str) -> str:
+    """Triage a REAL, de-identified TCGA tumor: map its somatic mutations onto the in-scope targets
+    and triage its primary genotype.
+
+    Returns the sample id and source, the total somatic-mutation count, which in-scope variants the
+    tumor actually carries, the matched genotype(s) (a tumor carrying BOTH L858R and T790M is matched
+    as the resistant DOUBLE mutant — a genuine acquired-resistance genotype), and the full triage
+    table for the primary genotype.
+
+    Interpretation guardrails (surface these to the user):
+    - This is a real de-identified patient tumor, open-access from TCGA. It is pre-wet-lab triage,
+      never treatment advice.
+    - A real tumor carries many mutations; the panel only covers EGFR L858R/T790M (and their double)
+      and KRAS G12C. Most of the tumor is out of scope — say so.
+    - The same affinity/CI/covalent caveats as triage_tumor apply to the triage table returned here.
+
+    Args:
+        sample_id: a cached TCGA barcode, e.g. "TCGA-L9-A50W-01". Call list_tcga_tumors first.
+    """
+    try:
+        return json.dumps(tcga.triage_sample(sample_id))
+    except (KeyError, FileNotFoundError) as e:
+        return json.dumps({"error": str(e),
+                           "available_tumors": [s["sample_id"] for s in tcga.list_samples()]})
 
 
 def main():

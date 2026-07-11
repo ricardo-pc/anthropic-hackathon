@@ -17,6 +17,7 @@ positive delta = binds worse on the mutant = resistance):
 CLI:  python src/triage.py "EGFR L858R+T790M"
 """
 import csv
+import json
 import os
 import sys
 from collections import defaultdict
@@ -25,6 +26,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPL = f"{HERE}/data/gnina_scores_replicates.csv"
+REGISTRY = f"{HERE}/config/mutations.json"
 
 # --- tunable thresholds (documented, not magic) ---
 BIND_KCAL = -6.0      # affinity <= this counts as "binds"
@@ -35,8 +37,12 @@ QC_RMSD_MAX = 5.0     # mean minimize RMSD above this => pose unreliable
 B = 4000              # bootstrap iterations
 RNG = np.random.default_rng(0)
 
-# mutation label -> mutant structure, WT reference, and an honesty note
-MUTATIONS = {
+# The tumor registry: mutation label -> mutant structure, WT reference, and an honesty note; plus
+# the cancer-type -> mutations map for the UI selector. This lives in config/mutations.json so a user
+# can add their OWN tumor without editing code (see docs/bring_your_own_tumor.md). The built-in
+# defaults below are the canonical in-scope set (matches docs/scope.md) AND the fallback used if the
+# config file is absent, so the tool always works out of the box.
+_BUILTIN_MUTATIONS = {
     "EGFR L858R":        dict(mut="8A2B", wt="3POZ", target="EGFR"),
     "EGFR T790M":        dict(mut="4I24", wt="3POZ", target="EGFR",
                               note="single T790M; clinically T790M usually co-occurs with L858R "
@@ -51,12 +57,24 @@ MUTATIONS = {
                               note="switch-II pocket already opened by sotorasib; other drugs docked "
                                    "into this induced conformation are often unreliable."),
 }
-
-# cancer type -> mutations to offer (UI selector; matches docs/scope.md, in-scope only)
-CANCER_TYPES = {
+_BUILTIN_CANCER_TYPES = {
     "lung cancer": ["EGFR L858R", "EGFR T790M", "EGFR L858R+T790M", "KRAS G12C"],
     "colorectal cancer": ["KRAS G12C"],
 }
+
+
+def _load_registry():
+    """Registry from config/mutations.json when present, else the built-in defaults."""
+    if os.path.exists(REGISTRY):
+        with open(REGISTRY) as f:
+            data = json.load(f)
+        muts = data.get("mutations") or _BUILTIN_MUTATIONS
+        cancers = data.get("cancer_types") or _BUILTIN_CANCER_TYPES
+        return muts, cancers
+    return _BUILTIN_MUTATIONS, _BUILTIN_CANCER_TYPES
+
+
+MUTATIONS, CANCER_TYPES = _load_registry()
 
 
 def _load():
@@ -106,14 +124,14 @@ def _bucket(aff_wt, aff_mut, rmsd_mut, lo, hi):
     return "non-binder", "low", "weak/ambiguous binding"
 
 
-def triage(mutation):
-    """Return the ranked, bucketed drug list for a mutation."""
-    if mutation not in MUTATIONS:
-        raise KeyError(f"unknown mutation {mutation!r}; known: {list(MUTATIONS)}")
-    spec = MUTATIONS[mutation]
-    aff, rmsd, conf, cat = _load()
-    wt_pdb, mut_pdb = spec["wt"], spec["mut"]
+def triage_structures(wt_pdb, mut_pdb, target, label, note=None, data=None):
+    """Core triage over two structures' docking scores — the reusable engine under triage().
 
+    Works for ANY wild-type/mutant structure pair that has scores in the replicate CSV, not just the
+    curated registry: the bring-your-own-GPU path docks a new mutant, appends its rows, then calls
+    this with the fresh mutant PDB id. `data` is an optional preloaded (aff, rmsd, conf, cat) tuple.
+    """
+    aff, rmsd, conf, cat = data if data is not None else _load()
     drugs = sorted({d for (d, p) in aff if p == mut_pdb})
     results = []
     for d in drugs:
@@ -131,7 +149,15 @@ def triage(mutation):
         ))
     # rank: strongest binders to the actual mutant first (most negative affinity_mut)
     results.sort(key=lambda r: r["affinity_mut"])
-    return dict(mutation=mutation, target=spec["target"], note=spec.get("note"), drugs=results)
+    return dict(mutation=label, target=target, note=note, drugs=results)
+
+
+def triage(mutation):
+    """Return the ranked, bucketed drug list for a registry mutation."""
+    if mutation not in MUTATIONS:
+        raise KeyError(f"unknown mutation {mutation!r}; known: {list(MUTATIONS)}")
+    spec = MUTATIONS[mutation]
+    return triage_structures(spec["wt"], spec["mut"], spec["target"], mutation, spec.get("note"))
 
 
 def list_mutations():
@@ -140,6 +166,32 @@ def list_mutations():
 
 def mutations_for_cancer(cancer_type):
     return CANCER_TYPES.get(cancer_type.lower(), [])
+
+
+def _components(label):
+    """The single-variant labels a MUTATIONS key is made of.
+    'EGFR L858R+T790M' -> {'EGFR L858R', 'EGFR T790M'}; 'EGFR L858R' -> {'EGFR L858R'}.
+    Returns an empty set for keys that describe a STRUCTURAL condition rather than a tumor
+    genotype (e.g. 'KRAS G12C (drug-bound pocket)'), so those never match a raw tumor profile."""
+    if "(" in label:
+        return set()
+    gene, changes = label.split(None, 1)
+    return {f"{gene} {c}" for c in changes.split("+")}
+
+
+def match_genotype(present_variants):
+    """Map a real tumor's variants onto the in-scope MUTATIONS keys it satisfies.
+
+    `present_variants` is an iterable of single-variant labels like {'EGFR L858R', 'EGFR T790M'}.
+    Returns the matching keys, compound genotypes first (a compound like 'EGFR L858R+T790M' matches
+    only when ALL its component variants are present in the tumor). This is what lets a raw somatic
+    profile that happens to carry both L858R and T790M be recognized as the resistant double mutant.
+    """
+    present = set(present_variants)
+    matched = [k for k in MUTATIONS if _components(k) and _components(k) <= present]
+    # most-specific first: the double mutant leads its component singletons
+    matched.sort(key=lambda k: len(_components(k)), reverse=True)
+    return matched
 
 
 # ---- CLI: human-readable triage (lets us SEE the tool's core output) ----

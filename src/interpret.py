@@ -22,6 +22,7 @@ from anthropic import beta_tool
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import triage  # noqa: E402
+import tcga  # noqa: E402
 
 # Sonnet 5 by default — this task (reasoning over ~25 rows of already-computed triage data with
 # deterministic bucket rules, and explaining it plainly) is squarely in its wheelhouse, at ~half the
@@ -47,6 +48,33 @@ WHAT THE DATA IS
     * improved  — binds meaningfully BETTER on the mutant. Rare.
     * non-binder — doesn't bind either state, or the pose is QC-unreliable.
 
+REAL TUMORS (TCGA)
+- You can also triage a REAL, de-identified patient tumor from TCGA Lung Adenocarcinoma. Use
+  list_tcga_tumors to see the cached samples, then triage_tcga_profile to map a tumor's actual
+  somatic mutations onto the in-scope targets and triage its primary genotype. Note honestly that a
+  real tumor carries many mutations and the panel only covers a few (EGFR L858R/T790M and their
+  double, KRAS G12C); most of the tumor is out of scope. When a tumor carries BOTH L858R and T790M,
+  it is triaged as the resistant double mutant — that is a genuine acquired-resistance genotype, not
+  a hypothetical.
+
+YOUR MOST IMPORTANT JOB — SEPARATE REAL SIGNAL FROM DOCKING ARTIFACT
+Docking is a weak proxy: it will happily hand a "robust" score to a drug that has no real business
+binding this target. The deterministic engine CANNOT tell a meaningful hit from a coincidental one —
+that judgment is yours, and it is the value a pipeline alone cannot provide. For every notable hit,
+especially "robust" repurposing candidates, weigh MECHANISTIC PLAUSIBILITY from what you know:
+- Does this drug's established mechanism plausibly involve THIS target/pathway? A kinase inhibitor
+  scoring on a kinase is plausible; a beta-blocker, statin, or antibiotic "binding" EGFR is far more
+  likely a coincidental docking score than a real interaction — say so.
+- Is there real-world repurposing precedent, and through what mechanism? Many old drugs have genuine
+  oncology repurposing literature (thalidomide in myeloma via cereblon; propranolol in vascular
+  tumors via adrenergic signaling; metformin, statins, itraconazole, disulfiram) — but usually via a
+  mechanism UNRELATED to the docked target. A real repurposing story that runs through a different
+  mechanism does NOT validate this docking hit; flag that distinction explicitly.
+- Deliver a verdict, not a list: sort the notable hits into "believe this — mechanistically plausible,
+  worth the assay" vs "likely a docking artifact — deprioritize", with a one-line reason for each. The
+  researcher should leave knowing which 2-3 compounds to actually test and which to skip.
+Flagging a hit as a probable artifact is as valuable as endorsing one — it saves wet-lab time and money.
+
 HOW TO ANSWER
 - Call the tools to get real numbers; never invent affinities, deltas, or buckets.
 - Lead with the plain-English answer the user actually asked for (which to avoid / which are safe),
@@ -54,6 +82,8 @@ HOW TO ANSWER
 - Quantify uncertainty honestly: a credible interval that excludes zero is a confident call; one that
   straddles zero is not. Say which.
 - Explain every technical term in plain words. Someone with no biology background should follow you.
+- Write in calm, clean prose. Do NOT use em-dashes; use commas, periods, or colons. Use bold
+  sparingly, at most for the drug names you are flagging, never scattered through the text for emphasis.
 
 HONESTY GUARDRAILS (these are non-negotiable)
 - Docking affinity is a PROXY for binding, not a measured Kd and not clinical efficacy. The statistics
@@ -110,6 +140,37 @@ def mutations_for_cancer(cancer_type: str) -> str:
                        "known_cancer_types": list(triage.CANCER_TYPES)})
 
 
+@beta_tool
+def list_tcga_tumors() -> str:
+    """List the cached real, de-identified TCGA Lung Adenocarcinoma tumors available to triage.
+
+    Each entry has a sample_id (a de-identified TCGA barcode), a one-line descriptor, and the number
+    of somatic mutations. Pass a sample_id to triage_tcga_profile to run the tool on that real tumor.
+    """
+    return json.dumps(tcga.list_samples())
+
+
+@beta_tool
+def triage_tcga_profile(sample_id: str) -> str:
+    """Triage a REAL, de-identified TCGA tumor: map its somatic mutations onto the in-scope targets
+    and triage its primary genotype.
+
+    Returns the sample id and source, the total number of somatic mutations, which in-scope variants
+    the tumor actually carries, the matched genotype(s) (a tumor with both L858R and T790M is matched
+    as the resistant DOUBLE mutant), and the full triage table for the primary genotype. Most of a
+    real tumor's mutations are out of scope — say so; the panel only covers EGFR L858R/T790M (and
+    their double) and KRAS G12C. Call list_tcga_tumors first to get valid sample ids.
+
+    Args:
+        sample_id: a cached TCGA barcode, e.g. "TCGA-L9-A50W-01".
+    """
+    try:
+        return json.dumps(tcga.triage_sample(sample_id))
+    except (KeyError, FileNotFoundError) as e:
+        return json.dumps({"error": str(e),
+                           "available_tumors": [s["sample_id"] for s in tcga.list_samples()]})
+
+
 def main():
     question = " ".join(sys.argv[1:]).strip() or (
         "I have a lung tumor with EGFR L858R+T790M. Which drugs should I avoid, "
@@ -123,7 +184,8 @@ def main():
         max_tokens=16000,
         thinking={"type": "adaptive"},
         system=SYSTEM,
-        tools=[triage_tumor, list_available_mutations, mutations_for_cancer],
+        tools=[triage_tumor, list_available_mutations, mutations_for_cancer,
+               list_tcga_tumors, triage_tcga_profile],
         messages=[{"role": "user", "content": question}],
     )
     try:

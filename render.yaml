@@ -1,0 +1,16 @@
+# Render blueprint for the MutationRx web app. Connect this repo on render.com and it deploys.
+# The service is a single persistent instance ON PURPOSE: the triage job store lives in memory and
+# uses background threads, so it must not be split across serverless/autoscaled instances.
+# GPU work is dispatched to RunPod (separate); do NOT set RUNPOD_API_KEY here for a public demo,
+# or strangers could spend your GPU credits — keep the hosted site cache-driven + the connect-GPU gate.
+services:
+  - type: web
+    name: mutationrx
+    runtime: python
+    plan: free            # free spins down when idle (~30s cold start); use "starter" to stay warm
+    numInstances: 1       # required: in-memory job store
+    buildCommand: pip install -r requirements-web.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT --app-dir app
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.6"

@@ -27,18 +27,23 @@ import sys
 
 HOME = os.path.expanduser("~")
 DIFFDOCK = f"{HOME}/DiffDock"
-CSV_IN = f"{HOME}/hackathon/data/full_sweep_input.csv"
+# Paths are env-overridable so a single new genotype can be docked into ITS OWN input/output/pose
+# dirs, never touching the master full-sweep files. Defaults reproduce the original full-sweep run.
+CSV_IN = os.environ.get("SWEEP_CSV", f"{HOME}/hackathon/data/full_sweep_input.csv")
 RECEPTORS = f"{HOME}/hackathon/data/structures/prepared"
 GNINA = f"{HOME}/hackathon/bin/gnina"
 DRUGS = f"{HOME}/hackathon/data/drugs.csv"
-REP_ROOT = f"{HOME}/hackathon/results/replicates"
-OUT = f"{HOME}/hackathon/results/gnina_scores_replicates.csv"
+REP_ROOT = os.environ.get("REP_ROOT", f"{HOME}/hackathon/results/replicates")
+OUT = os.environ.get("SCORES_OUT", f"{HOME}/hackathon/results/gnina_scores_replicates.csv")
 N_REPS = int(os.environ.get("N_REPS", "10"))
 
 PDB_META = {
     "3POZ": ("EGFR", "WT"), "8A2B": ("EGFR", "L858R"), "4I24": ("EGFR", "T790M"),
     "5UGC": ("EGFR", "L858R+T790M"), "8FMI": ("KRAS", "WT"), "4LDJ": ("KRAS", "G12C"),
     "6OIM": ("KRAS", "G12C+sotorasib"),
+    # new modeled genotypes (see docs/new_genotypes.md)
+    "EGFRC797S": ("EGFR", "C797S"), "EGFRG719S": ("EGFR", "G719S"),
+    "EGFRTRIPLE": ("EGFR", "L858R+T790M+C797S"), "KRASG12D": ("KRAS", "G12D"),
 }
 FIELDS = ["rep", "drug", "category", "pdb", "target", "state", "diffdock_confidence",
           "gnina_affinity", "gnina_minimize_rmsd", "gnina_cnn_score", "gnina_cnn_affinity"]
@@ -76,8 +81,13 @@ def reps_in_csv():
         return {int(r["rep"]) for r in csv.DictReader(f)}
 
 
+def n_complexes():
+    with open(CSV_IN) as f:
+        return sum(1 for _ in csv.DictReader(f))
+
+
 def rep_poses_complete(rep_dir):
-    return len(glob.glob(f"{rep_dir}/*/rank1.sdf")) >= 189
+    return len(glob.glob(f"{rep_dir}/*/rank1.sdf")) >= n_complexes()
 
 
 def run_diffdock(rep_dir):

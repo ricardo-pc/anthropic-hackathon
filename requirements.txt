@@ -10,3 +10,7 @@ anthropic>=0.116
 
 # MCP server (src/mcp_server.py) — talk to the tool inside Claude Code/Desktop. Needs Python 3.10+.
 mcp[cli]>=1.2
+
+# MutationRx app backend (app/server.py) — the research-assistant tool: job API + on-demand compute.
+fastapi>=0.115
+uvicorn>=0.30
