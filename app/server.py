@@ -53,15 +53,21 @@ def _client(x_client_id, request):
 
 @app.get("/api/bootstrap")
 def bootstrap():
-    """Everything the frontend needs on load: registry, real-tumor examples, targets, limits."""
+    """Everything the frontend needs on load: registry, real-tumor examples, targets, limits.
+
+    Cache-only and cheap: it maps each tumor's mutations onto in-scope genotypes WITHOUT running the
+    triage bootstrap (that heavy stats work happens per-request when a tumor is actually opened). This
+    keeps page load instant even on a small CPU.
+    """
     tumors = []
     try:
         for s in tcga.list_samples():
-            info = tcga.triage_sample(s["sample_id"])
-            if info.get("primary_genotype"):
+            sample = tcga.load_sample(s["sample_id"])
+            matched = tcga.map_to_targets(sample["mutations"])
+            if matched["matched_genotypes"]:
                 tumors.append(dict(sample_id=s["sample_id"], n_mutations=s["n_mutations"],
-                                   in_scope_variants=info["in_scope_variants"],
-                                   primary_genotype=info["primary_genotype"]))
+                                   in_scope_variants=matched["in_scope_variants"],
+                                   primary_genotype=matched["matched_genotypes"][0]))
     except FileNotFoundError:
         pass
     return dict(

@@ -38,11 +38,21 @@ let lastReq = null, lastDisplay = null;   // remembered so we can re-run after a
   $("query").oninput = onType;
   document.addEventListener("click", e => { if (!e.target.closest(".field")) hideSuggest(); });
 
-  BOOT = await (await api("/api/bootstrap")).json();
+  showHero();            // render immediately so the page is never blank while bootstrap loads
+  loadBoot();
+})();
+
+async function loadBoot(attempt = 0) {
+  try {
+    BOOT = await (await api("/api/bootstrap")).json();
+  } catch (e) {
+    if (attempt < 5) return setTimeout(() => loadBoot(attempt + 1), 1500);  // cold start / transient
+    return;
+  }
   renderSidebar();
   refreshUsage();
-  showHero();
-})();
+  if (document.querySelector(".hero")) showHero();   // fill the hero's tumor CTAs, if still on it
+}
 
 function applyTheme(t) { if (t) document.documentElement.setAttribute("data-theme", t); }
 
