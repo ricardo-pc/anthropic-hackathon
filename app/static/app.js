@@ -279,7 +279,9 @@ function showWhy() {
         tumor's driver mutation it ranks a panel of approved drugs by how their binding shifts on the actual
         mutant, states the uncertainty honestly, and then does the step software has never managed on its own:
         it has Claude judge which of those computational hits are mechanistically believable and which are simply
-        noise. The result is a short, trustworthy shortlist. Test these. Skip those. Here is why.</p></div>
+        noise. The result is a short, trustworthy shortlist. Test these. Skip those. Here is why. And the "why" is
+        open to inspection, not a black box: each call is backed by whether the drug's target sits in the tumor's
+        pathway and whether the cancer actually depends on it, and you can question any result in plain language.</p></div>
 
       <div class="wsec"><h3>Why this is the hard part, and the whole point</h3>
         <p>Anyone can generate a docking score. The scarce skill is knowing which scores to believe, a judgment
@@ -365,7 +367,9 @@ function showMethodology() {
         deterministic layer cannot tell a real hit from a coincidence; that judgment needs biology. Claude weighs
         each hit by mechanism and by the two evidence axes above, separating believable leads from likely artifacts.
         A statin scoring on EGFR is flagged as coincidental; a kinase inhibitor is taken seriously. This is where the
-        tool earns trust rather than generating noise.</p></div>
+        tool earns trust rather than generating noise. And the judgment is not a dead end: every result carries a
+        live chat that answers follow-up questions, grounded in the same numbers, buckets, and evidence axes, so you
+        can ask why a drug is a lead or whether a hit is worth the bench and get a cited answer.</p></div>
 
       <div class="msec valid"><h3><span class="mn">&#10003;</span> Validation: it reproduces known biology</h3>
         <p>Told nothing but the structures, the tool independently recovers the clinic: on the T790M resistance

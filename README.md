@@ -44,7 +44,8 @@ python src/triage.py "EGFR L858R+T790M"               # deterministic triage, no
 
 Add Claude's plain-English review, talk to it from Claude Code / Desktop over MCP, or point it at a
 real TCGA tumor — all in **[docs/usage.md](docs/usage.md)**. Or just open the
-**[live app](https://mutationrx.onrender.com)**.
+**[live app](https://mutationrx.onrender.com)**, where every result has a grounded chat: ask why a
+drug is a lead or whether a hit is worth the bench, and Claude answers over the same numbers.
 
 ## Documentation
 
@@ -59,8 +60,10 @@ real TCGA tumor — all in **[docs/usage.md](docs/usage.md)**. Or just open the
 
 ## Repository layout
 
-- `app/` — the hosted web app (FastAPI backend + single-page workspace in `app/static/`).
-- `src/` — triage engine (`triage.py`), interpretation agent (`interpret.py`), MCP server
+- `app/` — the hosted web app: FastAPI backend, single-page workspace in `app/static/`, and the
+  grounded per-result chat (`chat.py`, reusing the interpretation agent).
+- `src/` — triage engine (`triage.py`), evidence axes (`evidence.py`), interpretation agent
+  (`interpret.py`), MCP server
   (`mcp_server.py`), real-tumor loader (`tcga.py`), cancer-type selector (`selector.py`), dashboard
   builder, drug-panel builder, registry validator, structure prep.
 - `config/` — `mutations.json`, the editable tumor registry (add your own genotype here).
