@@ -25,6 +25,9 @@ from collections import defaultdict
 
 import numpy as np
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # so `import evidence` works from any caller
+import evidence  # noqa: E402 — orthogonal DepMap-dependency + pathway-grounding axes
+
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPL = f"{HERE}/data/gnina_scores_replicates.csv"
 REGISTRY = f"{HERE}/config/mutations.json"
@@ -151,7 +154,9 @@ def triage_structures(wt_pdb, mut_pdb, target, label, note=None, data=None):
         ))
     # rank: strongest binders to the actual mutant first (most negative affinity_mut)
     results.sort(key=lambda r: r["affinity_mut"])
-    return dict(mutation=label, target=target, note=note, drugs=results)
+    out = dict(mutation=label, target=target, note=note, drugs=results)
+    # attach the two orthogonal evidence axes (pathway grounding + DepMap dependency) per drug
+    return evidence.annotate_result(out)
 
 
 _TCACHE = None

@@ -29,8 +29,12 @@ def triage_tumor(mutation: str) -> str:
 
     Returns each drug classified into weakened / robust / improved / non-binder, with wild-type and
     mutant binding affinities (kcal/mol, more negative = stronger), the wild-type-vs-mutant delta,
-    its 95% credible interval, and a confidence flag. May include a 'note' field carrying an important
-    caveat for this mutation — always surface it.
+    its 95% credible interval, and a confidence flag. Each drug also carries an `evidence` object with
+    two orthogonal axes computed from data the docking never sees: `evidence.pathway.status`
+    (aligned / plausible / off-pathway — is the drug's real target in the driver's pathway?) and
+    `evidence.depmap.status` (dependency / weak / none — is that target a lung-adenocarcinoma
+    dependency in DepMap?). Cite them when judging plausibility. May include a 'note' field carrying an
+    important caveat for this mutation — always surface it.
 
     Interpretation guardrails (apply these when explaining the result to the user):
     - Affinity is a docking PROXY, not a measured Kd and not clinical efficacy.
@@ -40,8 +44,10 @@ def triage_tumor(mutation: str) -> str:
       plausibility from what you know: is this drug's real mechanism related to this target, or is the
       score coincidental? Many old drugs (thalidomide, propranolol, statins, metformin) have genuine
       cancer-repurposing literature but via mechanisms UNRELATED to the docked target — that does not
-      validate the docking hit. Sort hits into "believe this / worth an assay" vs "likely artifact /
-      skip", with a reason. Flagging an artifact is as useful as endorsing a hit.
+      validate the docking hit. Use the per-drug `evidence` axes to ground this: off-pathway + no
+      dependency on both axes is a strong artifact signal; aligned + a real dependency corroborates.
+      Sort hits into "believe this / worth an assay" vs "likely artifact / skip", with a reason.
+      Flagging an artifact is as useful as endorsing a hit.
     - 'robust' repurposing candidates are HYPOTHESES for wet-lab follow-up, never discoveries.
     - Heed the 'note': for KRAS G12C, non-covalent docking cannot capture the covalent mechanism, so
       results for the covalent G12C drugs (sotorasib/adagrasib/divarasib) are unreliable in either

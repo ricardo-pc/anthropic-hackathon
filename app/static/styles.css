@@ -393,6 +393,37 @@ table.rows{width:100%;border-collapse:collapse}
 .conf-flag.low{color:var(--c-weakened);background:color-mix(in srgb,var(--c-weakened) 12%,transparent)}
 .foot-note{font-size:11.5px;line-height:1.6;color:var(--muted);padding:2px 4px;max-width:92ch}
 
+/* ---------- orthogonal evidence axes (pathway grounding + DepMap dependency) ---------- */
+/* two quiet stacked micro-pills per drug row, on a shared teal->amber->grey "belief" ramp:
+   does the biology corroborate the docking score? triple-encoded (color + dot shape + word). */
+.oe-cell{width:104px;padding:2px 8px 2px 2px;vertical-align:middle}
+.oe{display:inline-flex;align-items:center;gap:4px;width:100%;white-space:nowrap;
+  font-size:9.5px;font-weight:700;letter-spacing:.01em;line-height:1.4;
+  padding:1px 7px 1px 5px;border-radius:20px;border:1px solid var(--border);color:var(--muted)}
+.oe+.oe{margin-top:3px}
+.oe-dot{flex:none;width:7px;height:7px;border-radius:50%;border:1.5px solid currentColor;background:transparent}
+.oe.lvl-hi{color:var(--brand-ink);background:var(--brand-tint);border-color:color-mix(in srgb,var(--brand) 32%,var(--border))}
+.oe.lvl-hi .oe-dot{background:currentColor}
+.oe.lvl-mid{color:var(--amber);background:var(--amber-tint);border-color:color-mix(in srgb,var(--amber) 34%,var(--border))}
+.oe.lvl-mid .oe-dot{background:linear-gradient(90deg,currentColor 50%,transparent 50%)}
+.oe.lvl-lo{color:var(--muted);background:transparent;border-color:var(--border)}
+.oe.lvl-lo .oe-dot{background:transparent}
+.legend .leg-sep{width:1px;height:12px;background:var(--line);margin:0 2px}
+.legend .oe-dot{border:1.5px solid currentColor}
+
+/* the "Orthogonal evidence" leads strip (echoes the .claude header + .badge rows) */
+.oe-strip{overflow:hidden}
+.oe-strip-h{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;padding:12px 18px;
+  border-bottom:1px solid var(--hair);background:linear-gradient(var(--brand-tint),transparent)}
+.oe-strip-t{font-size:13px;font-weight:700;letter-spacing:-0.01em;color:var(--brand-ink)}
+.oe-strip-s{font-size:11.5px;color:var(--muted)}
+.oe-lead{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:11px 18px}
+.oe-lead+.oe-lead{border-top:1px solid var(--hair)}
+.oe-lead-d{font-family:var(--mono);font-size:12.5px;font-weight:600;letter-spacing:-0.02em;width:92px;color:var(--ink)}
+.oe-lead .oe{width:auto}
+.oe-lead-note{flex:1;min-width:220px;font-size:12px;line-height:1.45;color:var(--ink-2)}
+@media (max-width:860px){ .oe-cell{display:none} }
+
 /* notices */
 .notice{border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;background:var(--surface);box-shadow:var(--shadow-sm);margin-top:20px}
 .notice.gpu{border-left:3px solid var(--brand)}

@@ -34,3 +34,20 @@ Library drugs contribute **no** scores until they are actually docked, so adding
 cached result; they become triage-able only after an overnight sweep appends their rows to
 `gnina_scores_replicates.csv`. Docking cost scales with drugs × structures × replicates — see
 `cluster/README.md` for a feasible staged plan (coarse 1-replicate screen first, then replicate the hits).
+
+## gene_kb.json + drug_targets.json — the orthogonal evidence axes
+Two knowledge bases that power the pathway-grounding + DepMap-dependency axes shown beside every drug
+(computed in [`../src/evidence.py`](../src/evidence.py), attached to every triage result):
+
+- **`drug_targets.json`** — each panel drug → its canonical human molecular target gene(s) and drug
+  class (from DrugBank / ChEMBL mechanism of action). These are the drug's *established* targets, not
+  the docked protein: the axes ask whether a drug's real biology has any business at the driver.
+- **`gene_kb.json`** — each target gene → its signaling pathway / enzyme class (KEGG + UniProt) and its
+  DepMap CRISPR dependency in lung adenocarcinoma. **The DepMap slice is cached and curated** — a
+  directional lineage-level dependency call grounded in the public DepMap gene-effect distributions
+  (depmap.org), not a live per-cell-line query; it is labeled as such in the UI and in the file's
+  `_provenance`. The axis is orthogonal to docking on purpose: a drug can dock well yet hit a protein
+  the cancer does not depend on.
+
+Reproduce the read for any genotype with `python analysis/evidence_axes.py "EGFR L858R+T790M"`
+(output cached in `../analysis/results/evidence_axes.txt`).
