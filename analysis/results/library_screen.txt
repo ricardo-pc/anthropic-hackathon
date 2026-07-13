@@ -1,0 +1,59 @@
+LIBRARY SCREEN — 35 replicated candidates triaged inside EGFR L858R+T790M
+(from an unbiased 300-drug approved library; night-2 replicates, N=10, WT 3POZ vs double 5UGC)
+============================================================================================
+
+[IMPROVED]  (10)
+  drug                         WT    mut  delta             95% CI  sig           mechanism
+  rimonabant                -3.63  -8.70  -5.07     [-8.04, -2.92]  CI excludes 0 CB1 antagonist (CNS)
+  moxifloxacin              -4.28  -7.98  -3.71     [-4.34, -2.71]  CI excludes 0 fluoroquinolone antibiotic
+  amitriptyline             -4.48  -7.59  -3.11     [-3.77, -2.28]  CI excludes 0 tricyclic antidepressant (CNS)
+  chlorpromazine            -3.78  -6.21  -2.42     [-3.21, -1.47]  CI excludes 0 antipsychotic (CNS)
+  promazine                 -4.16  -6.31  -2.15     [-2.69, -1.31]  CI excludes 0 antipsychotic (CNS)
+  bromazepam                -5.55  -7.57  -2.01     [-2.14, -1.71]  CI excludes 0 benzodiazepine (CNS)
+  sertindole                -6.08  -7.61  -1.52     [-2.35, -0.59]  CI excludes 0 antipsychotic (CNS)
+  temafloxacin              -8.98 -10.23  -1.25     [-1.63, -0.77]  CI excludes 0 fluoroquinolone antibiotic
+  fenoldopam                -7.99  -9.22  -1.23     [-1.55, -0.80]  CI excludes 0 dopamine agonist (cardiovascular)
+  levofloxacin-anhydrous    -7.23  -8.39  -1.16     [-1.50, -0.93]  CI excludes 0 fluoroquinolone antibiotic
+
+[ROBUST]  (20)
+  drug                         WT    mut  delta             95% CI  sig           mechanism
+  clomipramine              -6.57  -7.54  -0.97     [-2.93, +0.77]  straddles 0   tricyclic antidepressant (CNS)
+  rofecoxib                 -8.07  -9.02  -0.94     [-1.21, -0.58]  CI excludes 0 COX-2 inhibitor
+  citalopram                -6.25  -7.16  -0.91     [-1.33, -0.35]  CI excludes 0 SSRI (CNS)
+  gemifloxacin              -7.25  -8.15  -0.90     [-1.21, -0.52]  CI excludes 0 fluoroquinolone antibiotic
+  cefprozil-anhydrous-e     -6.70  -7.56  -0.86     [-1.66, -0.14]  CI excludes 0 cephalosporin antibiotic
+  mitoxantrone              -7.26  -8.06  -0.79     [-1.07, -0.50]  CI excludes 0 chemo (topoisomerase-II / DNA)
+  nomifensine               -7.32  -8.07  -0.75     [-0.84, -0.58]  CI excludes 0 antidepressant (CNS)
+  procaine                  -5.77  -6.31  -0.54     [-0.75, -0.38]  CI excludes 0 local anesthetic
+  fluoxetine                -7.31  -7.75  -0.44     [-0.90, -0.14]  CI excludes 0 SSRI (CNS)
+  trifluoperazine           -6.78  -7.17  -0.40     [-0.90, +0.16]  straddles 0   antipsychotic (CNS)
+  gemfibrozil               -6.12  -6.45  -0.33     [-0.92, +0.19]  straddles 0   fibrate
+  promethazine              -6.03  -6.31  -0.28     [-1.44, +0.55]  straddles 0   antihistamine (CNS)
+  clonazepam                -7.64  -7.87  -0.23     [-0.40, -0.12]  CI excludes 0 benzodiazepine (CNS)
+  apomorphine               -9.07  -9.16  -0.09     [-0.50, +0.54]  straddles 0   dopamine agonist (CNS)
+  molindone                 -6.37  -6.29  +0.08     [-0.37, +0.47]  straddles 0   antipsychotic (CNS)
+  morphine                  -6.90  -6.65  +0.25     [-0.21, +0.70]  straddles 0   opioid (CNS)
+  diazepam                  -6.88  -6.59  +0.29     [-0.66, +2.17]  straddles 0   benzodiazepine (CNS)
+  levorphanol               -6.69  -6.40  +0.29     [-0.08, +0.60]  straddles 0   opioid (CNS)
+  probucol                  -7.05  -6.52  +0.52     [-1.25, +3.77]  straddles 0   antilipidemic
+  lorazepam                 -7.75  -6.83  +0.92     [+0.69, +1.30]  CI excludes 0 benzodiazepine (CNS)
+
+[WEAKENED]  (2)
+  drug                         WT    mut  delta             95% CI  sig           mechanism
+  cyproheptadine            -6.55  -5.60  +0.94     [-1.90, +3.22]  straddles 0   antihistamine (CNS)
+  indinavir-anhydrous       -6.79  -5.35  +1.44     [-0.64, +6.33]  straddles 0   HIV protease inhibitor
+
+[NON-BINDER]  (3)
+  drug                         WT    mut  delta             95% CI  sig           mechanism
+  tribromsalan              -4.77  -5.48  -0.71     [-1.45, +0.11]  straddles 0   topical antiseptic
+  ergotamine                -5.37  -3.81  +1.56    [-5.07, +11.64]  straddles 0   ergot alkaloid
+  bromocriptine             -6.69   0.89  +7.58    [+0.70, +16.92]  CI excludes 0 ergot / dopamine agonist (CNS)
+
+--------------------------------------------------------------------------------------------
+REFERENCE — imatinib (curated, mechanistically legitimate kinase inhibitor): bucket=robust, delta=-2.29, CI=[-6.55, 0.41] (straddles 0)
+
+PUNCHLINE
+  The 'improved' bucket is full of significant, high-confidence, CI-excludes-zero hits that are
+  ALL promiscuous scaffolds (lipophilic CNS drugs + fluoroquinolones) with no EGFR mechanism.
+  imatinib, the one credible cross-kinase lead, has a WIDER interval than these artifacts.
+  A credible interval says a score is reproducible, not that it is real. Mechanism is the filter.

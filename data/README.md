@@ -14,3 +14,23 @@ Columns:
 **The `repurposing_candidate` bucket is deliberately the largest non-anchor category.** 7 of its 10 entries (aspirin, itraconazole, cimetidine, doxycycline, propranolol, thalidomide, verapamil) are hypotheses RepoRx itself proposed via literature/pharmacovigilance screening but never rigorously tested — they docked against unmutated KRAS or ERK2 (out of our scope) with a single raw confidence score, no rescoring, no WT-vs-mutant comparison, no uncertainty quantification. Re-running these through our matched WT/mutant structures + rescoring + bootstrap is a genuine, previously-undone test — a real finding either way (confirms a lead, or correctly debunks a speculative claim with actual rigor behind the "no").
 
 Regenerate via the script that produced this file if the pool changes (PubChem lookup + RDKit canonicalization).
+
+### Expanded approved-drug library (`approved_library`)
+Beyond the curated 27, `data/drugs.csv` can carry a broad repurposing library of FDA/EMA-approved
+small molecules, tagged `category = approved_library`. These are pulled from **ChEMBL** (`max_phase = 4`,
+`molecule_type = Small molecule`), desalted to the parent fragment, RDKit-canonicalized, and deduped by
+InChIKey against the curated set — same "no hand-typed SMILES" discipline as the original panel. They are
+kept deliberately distinct from the 10 curated `repurposing_candidate` entries (which each have a
+published, target-specific rationale); a library row's rationale is honestly just "approved; unbiased
+screen". `smiles_canonical_rdkit` is the docking input; `smiles_pubchem_raw` holds the ChEMBL source SMILES
+for library rows.
+
+Build/refresh it with:
+```
+python src/build_drug_panel.py --target 300     # append ~300 approved drugs (curated 27 untouched)
+python cluster/build_sweep_csv.py               # rebuild the DiffDock input from the expanded panel
+```
+Library drugs contribute **no** scores until they are actually docked, so adding them does not change any
+cached result; they become triage-able only after an overnight sweep appends their rows to
+`gnina_scores_replicates.csv`. Docking cost scales with drugs × structures × replicates — see
+`cluster/README.md` for a feasible staged plan (coarse 1-replicate screen first, then replicate the hits).

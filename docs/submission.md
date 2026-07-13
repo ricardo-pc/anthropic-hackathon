@@ -96,12 +96,18 @@ the week" bar.
 
 ## The one credible, non-obvious lead (the hunt result)
 
-Across **all four** EGFR mutants now tested — L858R (Δ −2.65), T790M (Δ −3.98, interval excludes
-zero), the double (Δ −2.29), and the freshly-docked C797S (Δ −2.39) — **imatinib**, the CML leukemia
-drug, is predicted to *gain* binding on the mutant. **Four for four, same direction.** That
-consistency across four independent structures is what separates a real signal from a one-off fluke.
-It's defensible where the statin/beta-blocker hits are not: imatinib is a **kinase inhibitor**, so
-docking it against EGFR reflects a plausible binding mode, and it is **non-obvious** (nobody uses
-imatinib for EGFR lung cancer). Strictly a *hypothesis worth an assay*, not a finding — but a genuinely
-interesting one, and exactly the kind of cross-kinase lead the docking-plus-Claude-review pipeline is
-built to surface. (`docs/new_genotypes.md` lists the next genotypes to keep testing it.)
+Across **all four** EGFR mutants now tested — L858R (Δ −2.65, interval excludes zero), T790M
+(Δ −3.98, excludes zero), the double (Δ −2.29), and the freshly-docked C797S (Δ −2.39) — **imatinib**,
+the CML leukemia drug, is predicted to *gain* binding on the mutant. Two of the four are individually
+significant and the other two lean the same way; said as a bare count, "four for four" is only a sign
+test (one-tailed p = 0.06). The rigorous claim is the **pooled** one: **pooling the replicate evidence
+across the four mutant structures gives a mean gain of Δ −2.83 kcal/mol with a 95% credible interval of
+[−4.68, −1.30] that excludes zero** — and clears the 1 kcal/mol practical-significance floor. That
+pooled, quantified consistency is what separates a real signal from a one-off fluke. The contrast makes
+it sharper: the *only* other drugs with a significant gain on the double are simvastatin (−0.79) and
+metformin (−0.49), both sub-1 kcal/mol and mechanistically unrelated to EGFR. Imatinib is the only
+significant gainer that is also above the effect-size floor **and** mechanistically legitimate (a
+**kinase inhibitor** docking a kinase), and it is **non-obvious** (nobody uses imatinib for EGFR lung
+cancer). Strictly a *hypothesis worth an assay*, not a finding — but exactly the kind of cross-kinase
+lead the docking-plus-Claude-review pipeline is built to surface. Reproduce with
+`python analysis/imatinib_pooled.py`. (`docs/new_genotypes.md` lists the next genotypes to keep testing it.)

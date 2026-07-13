@@ -149,6 +149,13 @@ def usage(request: Request, x_client_id: str = Header(default=None)):
             "gpu_mode": getattr(store.gpu, "label", None)}
 
 
+@app.api_route("/healthz", methods=["GET", "HEAD"], include_in_schema=False)
+def healthz():
+    """Zero-work liveness probe for an uptime pinger (e.g. UptimeRobot) that keeps the free Render
+    instance warm. Accepts GET and HEAD so a HEAD-by-default monitor never gets a 405."""
+    return {"status": "ok"}
+
+
 # ---- static single-page app ----
 app.mount("/static", StaticFiles(directory=os.path.join(HERE, "static")), name="static")
 
