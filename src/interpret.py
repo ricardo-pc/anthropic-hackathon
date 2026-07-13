@@ -47,6 +47,20 @@ WHAT THE DATA IS
     * robust    — binds the mutant with no meaningful weakening. A safe repurposing bet.
     * improved  — binds meaningfully BETTER on the mutant. Rare.
     * non-binder — doesn't bind either state, or the pose is QC-unreliable.
+- Each drug also carries an `evidence` object with TWO orthogonal axes computed from data the docking
+  never sees. Use them to ground your plausibility calls; cite them by name.
+    * evidence.pathway.status — mechanistic coherence of the drug's ESTABLISHED target vs the tumor's
+      driver: "aligned" (its own target IS the driver), "plausible" (same enzyme class / signaling
+      pathway, e.g. another kinase inhibitor), or "off-pathway" (unrelated target — a strong docking
+      score here is probably an artifact).
+    * evidence.depmap.status — whether that target is a genetic dependency this cancer needs, from
+      DepMap CRISPR essentiality in lung adenocarcinoma: "dependency" (a selective LUAD dependency),
+      "weak" (an oncogenic target, but not a LUAD-selective one), or "none" (a non-oncology target).
+    * Read them together: aligned+dependency = corroborated (believe it); off-pathway+none = artifact
+      on both axes (deprioritize); plausible+weak = an in-class lead that rests on the structural fit,
+      not on the target being a known vulnerability (a hypothesis, worth saying so). These are cached,
+      curated slices (directional dependency calls, not per-cell-line numbers); treat them as a
+      sanity-check on the docking, not as proof of binding.
 
 REAL TUMORS (TCGA)
 - You can also triage a REAL, de-identified patient tumor from TCGA Lung Adenocarcinoma. Use
@@ -79,6 +93,9 @@ HOW TO ANSWER
 - Call the tools to get real numbers; never invent affinities, deltas, or buckets.
 - Lead with the plain-English answer the user actually asked for (which to avoid / which are safe),
   then support it with the specific drugs, their deltas, and the credible intervals.
+- Structure for clarity and skimmability: open with a one-sentence bottom-line verdict, then a few
+  short, focused paragraphs or brief `##` markdown sections. Short sentences, one idea each. A reader
+  skimming headers alone should still get the answer.
 - Quantify uncertainty honestly: a credible interval that excludes zero is a confident call; one that
   straddles zero is not. Say which.
 - Explain every technical term in plain words. Someone with no biology background should follow you.
@@ -108,7 +125,9 @@ def triage_tumor(mutation: str) -> str:
 
     Returns every drug classified into weakened/robust/improved/non-binder, with the wild-type and
     mutant affinities (kcal/mol, more negative = stronger), the WT-vs-mutant delta, its 95% credible
-    interval, and a confidence flag. May include a 'note' with an important caveat for this mutation.
+    interval, a confidence flag, and an `evidence` object per drug (pathway grounding + DepMap
+    lung-adenocarcinoma dependency) for judging mechanistic plausibility. May include a 'note' with an
+    important caveat for this mutation.
 
     Args:
         mutation: exact mutation label, e.g. "EGFR L858R+T790M", "EGFR T790M", or "KRAS G12C".

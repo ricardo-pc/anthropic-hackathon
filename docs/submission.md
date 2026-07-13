@@ -44,6 +44,16 @@ missing.
   hidden; repurposing hits are flagged as hypotheses, and Claude actively deprioritizes the artifacts.
 - **Claude is essential, not decorative:** remove the reviewer and you're back to an untrustworthy hit
   list. The mechanistic judgment is the value.
+- **The judgment is grounded, not asserted:** every drug carries two orthogonal evidence axes the
+  docking never sees — **pathway grounding** (is the drug's established target in the driver's pathway /
+  enzyme class?) and **DepMap dependency** (is that target a gene lung adenocarcinoma actually needs, from
+  CRISPR essentiality?). On-target inhibitors corroborate on both (teal/teal); the statin, antidepressant,
+  and antibiotic artifacts fail both (grey/grey); **imatinib** lands amber/amber — in-class but not a lung
+  dependency, so the lead honestly rests on the structural cross-binding, not on its own targets being a
+  known vulnerability. This turns the artifact/real-lead call from "trust Claude's parametric knowledge"
+  into an auditable, cited read (`data/gene_kb.json`, `data/drug_targets.json`;
+  `python analysis/evidence_axes.py`). Both the in-product Claude review and the MCP tools receive these
+  axes and cite them.
 
 ## Why it outlasts the week
 

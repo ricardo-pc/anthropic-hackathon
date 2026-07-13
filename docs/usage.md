@@ -96,6 +96,22 @@ python src/selector.py                                   # interactive menus
 python src/selector.py "lung cancer" "EGFR L858R+T790M"  # jump straight to the triage
 ```
 
+## Orthogonal evidence axes (why to believe a hit)
+
+Every triage result now carries two per-drug axes that are independent of the docking score, so a
+coincidental hit can be caught: **pathway grounding** (is the drug's real target in the driver's
+pathway / enzyme class?) and **DepMap dependency** (is that target a gene lung adenocarcinoma actually
+needs?). They show as paired pills in the web app's evidence table and in an "Orthogonal evidence"
+strip, and they are handed to the Claude review (and the MCP tools) to ground its plausibility call.
+Reproduce the read for any genotype from the terminal:
+
+```bash
+python analysis/evidence_axes.py "EGFR L858R+T790M"   # on-target corroborated, imatinib in-between, artifacts flagged
+```
+
+Provenance and the honesty caveats (the DepMap slice is cached/curated, not a live query) live in
+`data/gene_kb.json` and `data/drug_targets.json`.
+
 ## The self-contained dashboard
 
 `src/build_dashboard.py` bakes every triage result (and the real TCGA tumors) into a single

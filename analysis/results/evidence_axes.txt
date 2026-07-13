@@ -1,0 +1,74 @@
+
+TUMOR EGFR L858R+T790M  (driver EGFR)
+Pathway grounding + DepMap dependency are ORTHOGONAL to the docking Delta below.
+
+  drug                    bucket       delta   pathway    depmap     targets
+  --------------------------------------------------------------------------------------------
+  temafloxacin            improved     -1.25   off-path   no dep     (no human target)
+  fenoldopam              improved     -1.23   off-path   no dep     DRD1
+  apomorphine             robust       -0.09   off-path   no dep     DRD1, DRD2
+  rofecoxib               robust       -0.94   off-path   no dep     PTGS2
+  rimonabant              improved     -5.07   off-path   no dep     CNR1
+  levofloxacin-anhydrous  improved     -1.16   off-path   no dep     (no human target)
+  gemifloxacin            robust       -0.90   off-path   no dep     (no human target)
+  nomifensine             robust       -0.75   off-path   no dep     SLC6A3, SLC6A2
+  mitoxantrone            robust       -0.79   off-path   no dep     TOP2A
+  moxifloxacin            improved     -3.71   off-path   no dep     (no human target)
+  imatinib                robust       -2.29   in-class   weak dep   ABL1, KIT, PDGFRA, PDGFRB
+  clonazepam              robust       -0.23   off-path   no dep     GABRA1
+  fluoxetine              robust       -0.44   off-path   no dep     SLC6A4
+  sertindole              improved     -1.52   off-path   no dep     DRD2, HTR2A
+  sunitinib               robust       -0.05   in-class   weak dep   KIT, PDGFRA, KDR, FLT3
+  amitriptyline           improved     -3.11   off-path   no dep     SLC6A4, SLC6A2
+  bromazepam              improved     -2.01   off-path   no dep     GABRA1
+  cefprozil-anhydrous-e   robust       -0.86   off-path   no dep     (no human target)
+  clomipramine            robust       -0.97   off-path   no dep     SLC6A4
+  trifluoperazine         robust       -0.40   off-path   no dep     DRD2
+  citalopram              robust       -0.91   off-path   no dep     SLC6A4
+  propranolol             robust       +0.53   off-path   no dep     ADRB1, ADRB2
+  thalidomide             robust       +0.13   off-path   no dep     CRBN
+  simvastatin             robust       -0.79   off-path   no dep     HMGCR
+  adagrasib               robust       +0.28   in-class   weak dep   KRAS
+  lorazepam               robust       +0.92   off-path   no dep     GABRA1
+  afatinib                weakened     +1.35   on-target  lung dep   EGFR, ERBB2
+  dacomitinib             weakened     +1.94   on-target  lung dep   EGFR, ERBB2
+  morphine                robust       +0.25   off-path   no dep     OPRM1
+  osimertinib             robust       +0.02   on-target  lung dep   EGFR
+  diazepam                robust       +0.29   off-path   no dep     GABRA1
+  gefitinib               weakened     +1.20   on-target  lung dep   EGFR
+  probucol                robust       +0.52   off-path   no dep     (no human target)
+  gemfibrozil             robust       -0.33   off-path   no dep     PPARA
+  levorphanol             robust       +0.29   off-path   no dep     OPRM1
+  doxycycline             weakened     +1.34   off-path   no dep     (no human target)
+  procaine                robust       -0.54   off-path   no dep     SCN5A
+  promazine               improved     -2.15   off-path   no dep     DRD2
+  promethazine            robust       -0.28   off-path   no dep     HRH1
+  molindone               robust       +0.08   off-path   no dep     DRD2
+  chlorpromazine          improved     -2.42   off-path   no dep     DRD2
+  aspirin                 weakened     +0.40   off-path   no dep     PTGS1, PTGS2
+  cyproheptadine          weakened     +0.94   off-path   no dep     HRH1, HTR2A
+  tribromsalan            non-binder   -0.71   off-path   no dep     (no human target)
+  vandetanib              weakened     +2.44   on-target  lung dep   EGFR, KDR, RET
+  indinavir-anhydrous     weakened     +1.44   off-path   no dep     (no human target)
+  crizotinib              weakened     +3.03   in-class   weak dep   ALK, ROS1, MET
+  erlotinib               weakened     +1.87   on-target  lung dep   EGFR
+  sotorasib               non-binder   +0.88   in-class   weak dep   KRAS
+  cimetidine              non-binder   +0.51   off-path   no dep     HRH2
+  dasatinib               weakened     +2.70   in-class   weak dep   ABL1, SRC, KIT
+  disulfiram              non-binder   +0.23   off-path   no dep     ALDH2
+  metformin               non-binder   -0.49   off-path   no dep     PRKAB1
+  ergotamine              non-binder   +1.56   off-path   no dep     HTR2A
+  divarasib               weakened     +2.80   in-class   weak dep   KRAS
+  verapamil               weakened     +3.85   off-path   no dep     CACNA1C
+  ponatinib               weakened     +7.18   in-class   weak dep   ABL1, FGFR1, KDR, PDGFRA
+  lapatinib               non-binder  +10.93   on-target  lung dep   EGFR, ERBB2
+  bromocriptine           non-binder   +7.58   off-path   no dep     DRD2
+  sorafenib               non-binder  +10.37   in-class   weak dep   BRAF, RAF1, KDR, KIT, PDGFRB
+  neratinib               non-binder   +9.64   on-target  lung dep   EGFR, ERBB2
+  itraconazole            non-binder   +7.76   off-path   no dep     CYP51A1, SMO
+
+  corroborated (on-target + lung dependency): afatinib, dacomitinib, osimertinib, gefitinib, vandetanib, erlotinib, lapatinib, neratinib
+  in-between  (in-class kinase, no lung dependency): imatinib, sunitinib, adagrasib, crizotinib, sotorasib, dasatinib, divarasib, ponatinib, sorafenib
+  artifacts   (off-pathway + no dependency): temafloxacin, fenoldopam, apomorphine, rofecoxib, rimonabant, levofloxacin-anhydrous, gemifloxacin, nomifensine …
+
+Provenance: data/gene_kb.json (DepMap LUAD dependency + KEGG pathway) and data/drug_targets.json (drug -> canonical target).

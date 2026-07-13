@@ -44,7 +44,9 @@ except Exception:
 
 app = FastAPI(title=f"{PRODUCT} API")
 store = JobStore(gpu=_gpu)
-_run_counts = {}  # client_id -> number of real compute runs used
+_run_counts = {}   # client_id -> number of real compute runs used
+_chat_counts = {}  # client_id -> chat messages sent (soft cap to bound live-API cost on a public demo)
+CHAT_LIMIT = 40
 
 
 @app.middleware("http")
@@ -147,6 +149,44 @@ def usage(request: Request, x_client_id: str = Header(default=None)):
     return {"used": _run_counts.get(client, 0), "limit": FREE_RUNS,
             "gpu_connected": store.gpu is not None,
             "gpu_mode": getattr(store.gpu, "label", None)}
+
+
+@app.post("/api/chat")
+async def chat(request: Request, x_client_id: str = Header(default=None)):
+    """Grounded, multi-turn conversation about the result currently on screen. Reuses the triage
+    interpretation agent (app/chat.py). Needs an Anthropic key at runtime; without one it returns a
+    clear 503 so the UI can say 'live chat needs a key' while the cached results stay fully usable."""
+    body = await request.json()
+    label = (body.get("label") or "").strip()
+    sample_id = (body.get("sample_id") or "").strip() or None
+    messages = body.get("messages") or []
+    if not label:
+        return JSONResponse({"error": "bad_request", "message": "missing result label"}, status_code=400)
+
+    client = _client(x_client_id, request)
+    used = _chat_counts.get(client, 0)
+    if used >= CHAT_LIMIT:
+        return JSONResponse(
+            {"error": "chat_limit", "message": f"You've reached the {CHAT_LIMIT}-message limit for this "
+             "session. Start a new triage to continue the conversation."}, status_code=429)
+
+    try:
+        import chat as chat_agent  # local import so a missing anthropic dep never breaks the whole app
+        reply = chat_agent.answer(label, sample_id, messages)
+    except ValueError as e:
+        return JSONResponse({"error": "bad_request", "message": str(e)}, status_code=400)
+    except Exception as e:  # noqa: BLE001
+        # anthropic.AuthenticationError (and any credential/SDK issue) -> friendly, non-fatal message
+        if "authentication" in f"{type(e).__name__} {e}".lower() or "api_key" in f"{e}".lower():
+            return JSONResponse(
+                {"error": "no_api_key",
+                 "message": "Live chat needs an ANTHROPIC_API_KEY configured on the server. The triage "
+                            "results and Claude's read above are fully available without it."},
+                status_code=503)
+        return JSONResponse({"error": "chat_failed", "message": f"{type(e).__name__}: {e}"}, status_code=500)
+
+    _chat_counts[client] = used + 1
+    return {"reply": reply, "used": used + 1, "limit": CHAT_LIMIT}
 
 
 @app.api_route("/healthz", methods=["GET", "HEAD"], include_in_schema=False)

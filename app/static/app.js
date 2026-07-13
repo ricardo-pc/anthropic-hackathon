@@ -304,7 +304,7 @@ function showWhy() {
 // ---------------- methodology ----------------
 function showMethodology() {
   $("query").value = ""; hideSuggest();
-  const flow = ["Structures", "Dock (DiffDock)", "Rescore (gnina)", "Bootstrap CI", "Classify", "Claude review"];
+  const flow = ["Structures", "Dock (DiffDock)", "Rescore (gnina)", "Bootstrap CI", "Classify", "Evidence axes", "Claude review"];
   $("workspace").innerHTML = `
     <div class="method">
       <span class="eyebrow">Methodology</span>
@@ -349,12 +349,23 @@ function showMethodology() {
         meaningful</b> (|&Delta;| &ge; 1 kcal/mol). Effect size, not just a p-value. Poses that move too far during
         minimization are QC-flagged as unreliable.</p></div>
 
-      <div class="msec"><h3><span class="mn">6</span> Claude reviews for mechanistic plausibility</h3>
+      <div class="msec"><h3><span class="mn">6</span> Two orthogonal evidence axes, grounded in data</h3>
+        <p>Before Claude judges a hit, each drug is scored on two axes the docking never sees, so the judgment is
+        auditable rather than taken on faith. <b>Pathway grounding</b> asks whether the drug's established molecular
+        target sits in the same signaling pathway or enzyme class as the tumor's driver (a kinase inhibitor on a
+        kinase driver is coherent; a statin on EGFR is not). <b>DepMap dependency</b> asks whether that target is a
+        gene this cancer actually needs, from CRISPR essentiality in lung-adenocarcinoma cell lines. A statin is
+        off-pathway and hits no dependency (both grey); an on-target inhibitor is aligned and a real dependency
+        (both teal); imatinib lands in between, in-class but not a lung dependency, so its lead rests on the
+        structural fit. These are cached, curated slices (see <code>data/gene_kb.json</code>), reported beside every
+        drug and to Claude.</p></div>
+
+      <div class="msec"><h3><span class="mn">7</span> Claude reviews for mechanistic plausibility</h3>
         <p>Docking will happily give a strong score to a drug that has no business binding the target. The
         deterministic layer cannot tell a real hit from a coincidence; that judgment needs biology. Claude weighs
-        each hit by mechanism, is this drug's known mode of action related to this target, and separates believable
-        leads from likely artifacts. A statin scoring on EGFR is flagged as coincidental; a kinase inhibitor is
-        taken seriously. This is where the tool earns trust rather than generating noise.</p></div>
+        each hit by mechanism and by the two evidence axes above, separating believable leads from likely artifacts.
+        A statin scoring on EGFR is flagged as coincidental; a kinase inhibitor is taken seriously. This is where the
+        tool earns trust rather than generating noise.</p></div>
 
       <div class="msec valid"><h3><span class="mn">&#10003;</span> Validation: it reproduces known biology</h3>
         <p>Told nothing but the structures, the tool independently recovers the clinic: on the T790M resistance
@@ -448,6 +459,16 @@ function renderResult(r) {
   const by = b => r.drugs.filter(d => d.bucket === b);
   const weak = by("weakened"), rob = by("robust"), imp = by("improved");
   const leads = rob.filter(d => d.category === "repurposing_candidate" || d.category === "approved_library");
+  // orthogonal-evidence strip: the robust/improved hits worth a belief check — everything that binds
+  // the mutant but isn't an obvious on-target inhibitor (the cross-kinase leads AND the artifacts).
+  // Rank the believable in-class leads first, then the strongest-scoring artifacts, so the real lead
+  // (e.g. imatinib) heads the strip instead of being buried under big-magnitude coincidences.
+  const oeRank = d => d.evidence.pathway.status === "plausible" ? 0 : 1;
+  const oeLeads = rob.concat(imp)
+    .filter(d => d.evidence && d.evidence.pathway && d.evidence.pathway.status !== "aligned")
+    .sort((a, b) => oeRank(a) - oeRank(b) || a.delta - b.delta).slice(0, 5);
+  // fresh conversation scoped to this result
+  CHAT = {label: r.label, sample_id: r.tumor ? r.tumor.sample_id : null, messages: [], busy: false, error: null};
   const nm = a => a.slice(0, 3).map(d => esc(d.drug)).join(", ") + (a.length > 3 ? ", …" : "");
   let line = `Docking flags <b>${weak.length}</b> drug${weak.length!=1?"s":""} that lose grip on ${esc(r.label)} and <b>${rob.length}</b> that hold, but a robust docking score isn't automatically a real hit.`;
   if (leads.length) line += ` <b>${leads.length}</b> are approved repurposing candidates (${nm(leads)}); Claude's review below weighs which are mechanistically believable and which are likely artifacts.`;
@@ -487,6 +508,8 @@ function renderResult(r) {
       </div>
       ${badges.length?`<div class="card">${badges.join("")}</div>`:""}
       ${r.claude_read?claudePanel(r):""}
+      ${oeStrip(oeLeads)}
+      ${r.dry_run?"":chatPanel(r)}
       <details class="card disclose" ${r.claude_read?"":"open"}>
         <summary>Full evidence <span class="sh">all ${r.drugs.length} drugs, wild-type to mutant shift with 95% CI</span><span class="chev">▸</span></summary>
         <div class="evidence">${evidence(r)}</div>
@@ -494,6 +517,7 @@ function renderResult(r) {
       <div class="foot-note">Δ = mutant minus wild-type affinity (kcal/mol); more negative binds stronger. A credible interval that excludes zero is a confident call; one that straddles zero is not. Docking affinity is a proxy, not a measured K<sub>d</sub> or clinical efficacy. This is pre-wet-lab triage, not treatment advice.</div>
     </div>`;
   attachTips();
+  wireChat();
   document.querySelectorAll(".tile[data-focus]").forEach(t => t.onclick = () => focusBucket(t.dataset.focus));
   const sb = $("structBtn");
   if (sb) sb.onclick = () => openStructure(sb.dataset.label);
@@ -555,6 +579,138 @@ function claudePanel(r) {
     <div class="body">${mdToHtml(r.claude_read)}</div></div>`;
 }
 
+// ---------------- result chat (grounded conversation about THIS result) ----------------
+// A multi-turn conversation on top of Claude's read: the same interpretation agent, but interactive
+// and scoped to the result on screen. Answers are grounded in the real numbers via the triage tools.
+let CHAT = {label: null, sample_id: null, messages: [], busy: false, error: null};
+
+function chatSuggestions(r) {
+  const q = [];
+  const lead = r.drugs.find(d => (d.bucket === "robust" || d.bucket === "improved") &&
+                                 d.evidence && d.evidence.pathway && d.evidence.pathway.status === "plausible");
+  q.push("Which drugs should I avoid here, and why?");
+  q.push(lead ? `Is ${lead.drug} actually worth testing?` : "Which robust hits are likely just docking artifacts?");
+  q.push("What does a 95% credible interval mean for these calls?");
+  return q;
+}
+
+function chatPanel(r) {
+  const sugg = chatSuggestions(r).map(s =>
+    `<button class="chat-sugg" data-q="${esc(s)}">${esc(s)}</button>`).join("");
+  return `<div class="card chat" id="chatCard">
+    <div class="ch"><span class="dot2"></span><b>Ask about this result</b>
+      <span class="mtag">Claude · live</span></div>
+    <div class="chat-scroll" id="chatMsgs">
+      <div class="chat-empty">
+        <p>Go beyond the read: ask why a drug is a lead, what a number means, or whether a hit is worth the bench.</p>
+        <div class="chat-suggs">${sugg}</div>
+      </div>
+    </div>
+    <form class="chat-inrow" id="chatForm" autocomplete="off">
+      <input id="chatInput" placeholder="Ask about ${esc(r.label)}…" aria-label="Ask about this result">
+      <button class="chat-send" id="chatSend" type="submit" aria-label="Send">${chatSendIcon}</button>
+    </form>
+    <div class="chat-foot">Grounded in the numbers above via the triage tools. A first-pass research aid, not treatment advice.</div>
+  </div>`;
+}
+
+const chatSendIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>`;
+
+function renderChat() {
+  const box = $("chatMsgs"); if (!box) return;
+  if (!CHAT.messages.length && !CHAT.busy && !CHAT.error) return;  // keep the empty/suggestions state
+  let html = "";
+  for (const m of CHAT.messages) {
+    html += m.role === "user"
+      ? `<div class="cm user"><div class="cm-b">${esc(m.content)}</div></div>`
+      : `<div class="cm bot"><span class="cm-ic">${SPARK}</span><div class="cm-b">${mdToHtml(m.content)}</div></div>`;
+  }
+  if (CHAT.busy) html += `<div class="cm bot"><span class="cm-ic">${SPARK}</span><div class="cm-b"><span class="cm-typing"><i></i><i></i><i></i></span></div></div>`;
+  if (CHAT.error) html += `<div class="cm bot"><span class="cm-ic err">${IC_WARN}</span><div class="cm-b cm-err">${esc(CHAT.error)}</div></div>`;
+  box.innerHTML = html;
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendChat(text) {
+  text = (text || "").trim();
+  if (!text || CHAT.busy) return;
+  CHAT.error = null;
+  CHAT.messages.push({role: "user", content: text});
+  CHAT.busy = true;
+  const inp = $("chatInput"); if (inp) inp.value = "";
+  renderChat();
+  try {
+    const res = await (await api("/api/chat", {method: "POST",
+      body: JSON.stringify({label: CHAT.label, sample_id: CHAT.sample_id, messages: CHAT.messages})})).json();
+    if (res.error) { CHAT.messages.pop(); CHAT.error = res.message || "Chat is unavailable right now."; }
+    else { CHAT.messages.push({role: "assistant", content: res.reply}); }
+  } catch (e) {
+    CHAT.messages.pop();
+    CHAT.error = "Couldn't reach the chat service. Is the server running?";
+  }
+  CHAT.busy = false;
+  renderChat();
+}
+
+function wireChat() {
+  const form = $("chatForm"); if (!form) return;
+  form.onsubmit = e => { e.preventDefault(); sendChat($("chatInput").value); };
+  document.querySelectorAll(".chat-sugg").forEach(b => b.onclick = () => sendChat(b.dataset.q));
+}
+
+// ---------- orthogonal evidence axes (pathway grounding + DepMap dependency) ----------
+// A shared teal->amber->grey "belief" ramp answers "should we believe this docking hit?" using
+// data the docking never sees. Triple-encoded: color + dot shape + a distinct word per state.
+const OE = {
+  pathway: {
+    aligned:      {cls:"lvl-hi",  lab:"on-path",  full:"Pathway grounding: aligned — the drug's own target is the tumor's driver gene"},
+    plausible:    {cls:"lvl-mid", lab:"in-class", full:"Pathway grounding: plausible — same enzyme class / signaling pathway as the driver, not the drug's designed target"},
+    "off-pathway":{cls:"lvl-lo",  lab:"off-path", full:"Pathway grounding: off-pathway — target unrelated to the driver's biology, so a strong docking score is likely an artifact"},
+  },
+  depmap: {
+    dependency:{cls:"lvl-hi",  lab:"lung dep", full:"DepMap dependency: the target is a selective lung-adenocarcinoma dependency — the cancer needs it (CRISPR essentiality)"},
+    weak:      {cls:"lvl-mid", lab:"weak dep", full:"DepMap dependency: an oncogenic target, but not a lung-adenocarcinoma-selective dependency"},
+    none:      {cls:"lvl-lo",  lab:"no dep",   full:"DepMap dependency: a non-oncology target the cancer does not depend on"},
+  },
+};
+const oePill = o => `<span class="oe ${o.cls}" aria-label="${esc(o.full)}"><span class="oe-dot"></span>${o.lab}</span>`;
+function oeParts(d) {
+  const e = d.evidence; if (!e) return null;
+  const p = OE.pathway[e.pathway && e.pathway.status], k = OE.depmap[e.depmap && e.depmap.status];
+  return (p && k) ? {p, k, e} : null;
+}
+function oeCell(d) {
+  const o = oeParts(d);
+  return o ? `<td class="oe-cell">${oePill(o.p)}${oePill(o.k)}</td>` : `<td class="oe-cell"></td>`;
+}
+function oeTip(d) {
+  const e = d.evidence; if (!e || !e.pathway || !e.depmap) return "";
+  const tgt = (e.targets_display && e.targets_display.length) ? e.targets_display.join(", ") : "no annotated human target";
+  return `<br><b>Target:</b> ${esc(tgt)}${e.target_class ? ` (${esc(e.target_class)})` : ""}.`
+       + `<br><b>Pathway:</b> ${esc(e.pathway.status)} &mdash; ${esc(e.pathway.detail)}.`
+       + `<br><b>DepMap:</b> ${esc(e.depmap.status)} &mdash; ${esc(e.depmap.detail)}.`;
+}
+const OE_NOTE = {
+  "aligned|dependency":  "On-target and a validated lung dependency: the docking gain is corroborated by the biology.",
+  "plausible|weak":      "In-class kinase cross-binding is plausible, but its own targets aren't lung dependencies: this lead rests on the structural fit, not its target biology.",
+  "plausible|dependency":"Same pathway and a real lung dependency: a serious lead.",
+  "plausible|none":      "Same enzyme class as the driver, but no dependency signal: a weak structural lead.",
+  "off-pathway|none":    "Off the driver's pathway and not a dependency: most likely a docking artifact.",
+  "off-pathway|weak":    "Off the driver's pathway; the target isn't a lung dependency: likely a docking artifact.",
+};
+function oeNote(d) {
+  const e = d.evidence; if (!e || !e.pathway || !e.depmap) return "";
+  return OE_NOTE[`${e.pathway.status}|${e.depmap.status}`] || `Pathway ${e.pathway.status}; DepMap dependency ${e.depmap.status}.`;
+}
+function oeStrip(rows) {
+  if (!rows.length) return "";
+  const body = rows.map(d => {
+    const o = oeParts(d); if (!o) return "";
+    return `<div class="oe-lead"><span class="oe-lead-d">${esc(d.drug)}</span>${oePill(o.p)}${oePill(o.k)}<span class="oe-lead-note">${esc(oeNote(d))}</span></div>`;
+  }).join("");
+  return `<div class="card oe-strip"><div class="oe-strip-h"><span class="oe-strip-t">Orthogonal evidence</span><span class="oe-strip-s">does the biology corroborate the docking score? &mdash; two axes the docking never sees</span></div>${body}</div>`;
+}
+
 function evidence(r) {
   const legend = `<div class="legend">
     <span class="it"><span class="sw" style="background:var(--c-weakened)"></span>Weakened</span>
@@ -562,6 +718,11 @@ function evidence(r) {
     <span class="it"><span class="sw" style="background:var(--c-improved)"></span>Improved</span>
     <span class="it"><span class="sw" style="background:var(--c-nonbinder)"></span>Non-binder</span>
     <span class="it"><span class="sw sw-band"></span>within &plusmn;1 kcal/mol &mdash; negligible</span>
+    <span class="leg-sep"></span>
+    <span class="it"><span class="oe-dot" style="color:var(--brand-ink);background:currentColor"></span>corroborates</span>
+    <span class="it"><span class="oe-dot" style="color:var(--amber);background:linear-gradient(90deg,currentColor 50%,transparent 50%)"></span>partial</span>
+    <span class="it"><span class="oe-dot" style="color:var(--muted)"></span>off-mechanism</span>
+    <span class="it" style="color:var(--muted)">(top: pathway &middot; bottom: DepMap)</span>
     <span class="ev-axis">&larr; binds better&nbsp;&middot;&nbsp;0 = no change&nbsp;&middot;&nbsp;worse (resistance) &rarr;</span></div>`;
   let html = legend;
   for (const bucket of ORDER) {
@@ -572,7 +733,7 @@ function evidence(r) {
     for (const d of rows) {
       const ds = (d.delta>=0?"+":"") + d.delta.toFixed(2);
       const bench = d.category === "known_answer" ? `<span class="bench">benchmark</span>` : "";
-      html += `<tr data-tip="<b>${esc(d.drug)}</b>: ${esc(d.reason)}.<br>WT ${d.affinity_wt}, mutant ${d.affinity_mut} kcal/mol · Δ ${ds} [95% CI ${d.ci95[0].toFixed(2)}, ${d.ci95[1].toFixed(2)}] · ${d.confidence} confidence."><td style="width:150px"><span class="dname">${esc(d.drug)}${bench}</span><span class="cat">${esc(catLabel(d.category))}</span></td><td>${ciBar(d)}</td><td class="num" style="width:54px;color:var(${BMETA[d.bucket].cvar})">${ds}</td><td class="ci-txt" style="width:96px">[${d.ci95[0].toFixed(2)}, ${d.ci95[1].toFixed(2)}]</td>${confCell(d)}</tr>`;
+      html += `<tr data-tip="<b>${esc(d.drug)}</b>: ${esc(d.reason)}.<br>WT ${d.affinity_wt}, mutant ${d.affinity_mut} kcal/mol · Δ ${ds} [95% CI ${d.ci95[0].toFixed(2)}, ${d.ci95[1].toFixed(2)}] · ${d.confidence} confidence.${oeTip(d)}"><td style="width:150px"><span class="dname">${esc(d.drug)}${bench}</span><span class="cat">${esc(catLabel(d.category))}</span></td>${oeCell(d)}<td>${ciBar(d)}</td><td class="num" style="width:54px;color:var(${BMETA[d.bucket].cvar})">${ds}</td><td class="ci-txt" style="width:96px">[${d.ci95[0].toFixed(2)}, ${d.ci95[1].toFixed(2)}]</td>${confCell(d)}</tr>`;
     }
     html += `</tbody></table></div>`;
   }

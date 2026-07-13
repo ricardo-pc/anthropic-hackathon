@@ -25,6 +25,12 @@ leads from coincidental docking scores.
   intervals, high confidence) — and every one is a mechanistic artifact (antidepressants,
   antipsychotics, antibiotics). Only mechanism separates them, which is exactly the judgment Claude
   adds. Reproduce it: `python analysis/library_screen_triage.py`.
+- **The reviewer's judgment is grounded, not asserted.** Every drug carries two orthogonal evidence
+  axes the docking never sees: **pathway grounding** (is the drug's real target in the driver's
+  pathway / enzyme class?) and **DepMap dependency** (is that target a gene lung adenocarcinoma
+  actually needs, from CRISPR essentiality?). On-target inhibitors corroborate on both; the statin /
+  antidepressant artifacts fail both; imatinib lands in between — in-class but not a lung dependency,
+  so its lead rests on the structural fit. Reproduce it: `python analysis/evidence_axes.py`.
 - **Honest by construction.** Docking affinity is a proxy, repurposing hits are hypotheses, and
   covalent mechanisms (KRAS G12C, osimertinib on C797S) are flagged as blind spots, not hidden.
 
