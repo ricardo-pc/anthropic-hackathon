@@ -467,6 +467,8 @@ function renderResult(r) {
   const oeLeads = rob.concat(imp)
     .filter(d => d.evidence && d.evidence.pathway && d.evidence.pathway.status !== "aligned")
     .sort((a, b) => oeRank(a) - oeRank(b) || a.delta - b.delta).slice(0, 5);
+  // fresh conversation scoped to this result
+  CHAT = {label: r.label, sample_id: r.tumor ? r.tumor.sample_id : null, messages: [], busy: false, error: null};
   const nm = a => a.slice(0, 3).map(d => esc(d.drug)).join(", ") + (a.length > 3 ? ", …" : "");
   let line = `Docking flags <b>${weak.length}</b> drug${weak.length!=1?"s":""} that lose grip on ${esc(r.label)} and <b>${rob.length}</b> that hold, but a robust docking score isn't automatically a real hit.`;
   if (leads.length) line += ` <b>${leads.length}</b> are approved repurposing candidates (${nm(leads)}); Claude's review below weighs which are mechanistically believable and which are likely artifacts.`;
@@ -507,6 +509,7 @@ function renderResult(r) {
       ${badges.length?`<div class="card">${badges.join("")}</div>`:""}
       ${r.claude_read?claudePanel(r):""}
       ${oeStrip(oeLeads)}
+      ${r.dry_run?"":chatPanel(r)}
       <details class="card disclose" ${r.claude_read?"":"open"}>
         <summary>Full evidence <span class="sh">all ${r.drugs.length} drugs, wild-type to mutant shift with 95% CI</span><span class="chev">▸</span></summary>
         <div class="evidence">${evidence(r)}</div>
@@ -514,6 +517,7 @@ function renderResult(r) {
       <div class="foot-note">Δ = mutant minus wild-type affinity (kcal/mol); more negative binds stronger. A credible interval that excludes zero is a confident call; one that straddles zero is not. Docking affinity is a proxy, not a measured K<sub>d</sub> or clinical efficacy. This is pre-wet-lab triage, not treatment advice.</div>
     </div>`;
   attachTips();
+  wireChat();
   document.querySelectorAll(".tile[data-focus]").forEach(t => t.onclick = () => focusBucket(t.dataset.focus));
   const sb = $("structBtn");
   if (sb) sb.onclick = () => openStructure(sb.dataset.label);
@@ -573,6 +577,85 @@ function claudePanel(r) {
   return `<div class="card claude">
     <div class="ch"><span class="dot2"></span><b>Claude's read</b><span class="mtag">${esc(r.claude_model||"Claude")} · ${r.cached?"cached":"live"}</span></div>
     <div class="body">${mdToHtml(r.claude_read)}</div></div>`;
+}
+
+// ---------------- result chat (grounded conversation about THIS result) ----------------
+// A multi-turn conversation on top of Claude's read: the same interpretation agent, but interactive
+// and scoped to the result on screen. Answers are grounded in the real numbers via the triage tools.
+let CHAT = {label: null, sample_id: null, messages: [], busy: false, error: null};
+
+function chatSuggestions(r) {
+  const q = [];
+  const lead = r.drugs.find(d => (d.bucket === "robust" || d.bucket === "improved") &&
+                                 d.evidence && d.evidence.pathway && d.evidence.pathway.status === "plausible");
+  q.push("Which drugs should I avoid here, and why?");
+  q.push(lead ? `Is ${lead.drug} actually worth testing?` : "Which robust hits are likely just docking artifacts?");
+  q.push("What does a 95% credible interval mean for these calls?");
+  return q;
+}
+
+function chatPanel(r) {
+  const sugg = chatSuggestions(r).map(s =>
+    `<button class="chat-sugg" data-q="${esc(s)}">${esc(s)}</button>`).join("");
+  return `<div class="card chat" id="chatCard">
+    <div class="ch"><span class="dot2"></span><b>Ask about this result</b>
+      <span class="mtag">Claude · live</span></div>
+    <div class="chat-scroll" id="chatMsgs">
+      <div class="chat-empty">
+        <p>Go beyond the read: ask why a drug is a lead, what a number means, or whether a hit is worth the bench.</p>
+        <div class="chat-suggs">${sugg}</div>
+      </div>
+    </div>
+    <form class="chat-inrow" id="chatForm" autocomplete="off">
+      <input id="chatInput" placeholder="Ask about ${esc(r.label)}…" aria-label="Ask about this result">
+      <button class="chat-send" id="chatSend" type="submit" aria-label="Send">${chatSendIcon}</button>
+    </form>
+    <div class="chat-foot">Grounded in the numbers above via the triage tools. A first-pass research aid, not treatment advice.</div>
+  </div>`;
+}
+
+const chatSendIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>`;
+
+function renderChat() {
+  const box = $("chatMsgs"); if (!box) return;
+  if (!CHAT.messages.length && !CHAT.busy && !CHAT.error) return;  // keep the empty/suggestions state
+  let html = "";
+  for (const m of CHAT.messages) {
+    html += m.role === "user"
+      ? `<div class="cm user"><div class="cm-b">${esc(m.content)}</div></div>`
+      : `<div class="cm bot"><span class="cm-ic">${SPARK}</span><div class="cm-b">${mdToHtml(m.content)}</div></div>`;
+  }
+  if (CHAT.busy) html += `<div class="cm bot"><span class="cm-ic">${SPARK}</span><div class="cm-b"><span class="cm-typing"><i></i><i></i><i></i></span></div></div>`;
+  if (CHAT.error) html += `<div class="cm bot"><span class="cm-ic err">${IC_WARN}</span><div class="cm-b cm-err">${esc(CHAT.error)}</div></div>`;
+  box.innerHTML = html;
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendChat(text) {
+  text = (text || "").trim();
+  if (!text || CHAT.busy) return;
+  CHAT.error = null;
+  CHAT.messages.push({role: "user", content: text});
+  CHAT.busy = true;
+  const inp = $("chatInput"); if (inp) inp.value = "";
+  renderChat();
+  try {
+    const res = await (await api("/api/chat", {method: "POST",
+      body: JSON.stringify({label: CHAT.label, sample_id: CHAT.sample_id, messages: CHAT.messages})})).json();
+    if (res.error) { CHAT.messages.pop(); CHAT.error = res.message || "Chat is unavailable right now."; }
+    else { CHAT.messages.push({role: "assistant", content: res.reply}); }
+  } catch (e) {
+    CHAT.messages.pop();
+    CHAT.error = "Couldn't reach the chat service. Is the server running?";
+  }
+  CHAT.busy = false;
+  renderChat();
+}
+
+function wireChat() {
+  const form = $("chatForm"); if (!form) return;
+  form.onsubmit = e => { e.preventDefault(); sendChat($("chatInput").value); };
+  document.querySelectorAll(".chat-sugg").forEach(b => b.onclick = () => sendChat(b.dataset.q));
 }
 
 // ---------- orthogonal evidence axes (pathway grounding + DepMap dependency) ----------
