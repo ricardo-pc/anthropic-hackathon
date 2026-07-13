@@ -40,7 +40,7 @@ Let me show you why this matters. We tested a library of three hundred approved 
 
 Every single one was a false alarm. Antidepressants. Antibiotics. Drugs with nothing to do with this cancer. They simply happened to fit the shape. A tool without Claude would send the scientist to test all ten, and waste months.
 
-**[SCREEN: scroll up to Claude's read, to the "Library screen" paragraph; land on the sentence naming imatinib. Then flick to the "Orthogonal evidence" strip: the ten artifacts sit grey — off-pathway, no dependency — while imatinib stands apart as in-class, so the reasoning is shown, not just asserted.]**
+**[SCREEN: scroll up to Claude's read, to the "Library screen" paragraph; land on the sentence naming imatinib. Then flick to the "Orthogonal evidence" strip: imatinib leads it as in-class, while the coincidental hits below are flagged off-pathway with no dependency (grey), so the reasoning is shown, not just asserted.]**
 
 Claude removed all ten. And it saved one quiet lead that the math almost missed: a blood cancer drug called imatinib. Nobody uses it for lung cancer. But imatinib works by blocking the same kind of protein this lung cancer depends on. So it makes biological sense. It is not a random match. And something surprising happened in our tests: most drugs fit the mutated protein worse, but imatinib fit it even better, every single time. That is a real lead — an idea worth testing in the lab.
 
