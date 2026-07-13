@@ -44,9 +44,15 @@ Every single one was a false alarm. Antidepressants. Antibiotics. Drugs with not
 
 Claude removed all ten. And it saved one quiet lead that the math almost missed: a blood cancer drug called imatinib. Nobody uses it for lung cancer. But imatinib works by blocking the same kind of protein this lung cancer depends on. So it makes biological sense. It is not a random match. And something surprising happened in our tests: most drugs fit the mutated protein worse, but imatinib fit it even better, every single time. That is a real lead — an idea worth testing in the lab.
 
-**[SCREEN: back to the top of the result — the verdict tiles. Then a closing card: "The docking finds candidates. Claude decides which to believe." and mutationrx.onrender.com]**
+**[SCREEN: back to the top of the result — the verdict tiles.]**
 
 So that is the whole point. The computer finds the candidates. Claude decides which ones to believe.
+
+**[SCREEN: scroll to the "Ask about this result" chat. Click the suggested question "Which drugs should I avoid here, and why?" Claude's answer appears, naming the drugs and citing their numbers. (Avoid the imatinib question on camera — on a single tumor its credible interval straddles zero, so the chat is honestly cautious there, which fights the story.)]**
+
+And you are not stuck with a verdict. You can ask it anything — why this drug, what a number means, whether a hit is worth testing — and it answers from the very same evidence, in plain language.
+
+**[SCREEN: closing card: "The docking finds candidates. Claude decides which to believe." and mutationrx.onrender.com]**
 
 For a scientist, this turns weeks of guessing into minutes. For a patient, it makes the path from "my drug stopped working" to "here is the next thing to try" shorter.
 
