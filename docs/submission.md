@@ -27,7 +27,8 @@ the target**, and a researcher can't tell signal from artifact. That gap is the 
 
 > **The docking finds candidates. Claude decides which to believe.**
 
-For a tumor's driver mutation, MutationRx docks a 27-drug panel against the **wild-type and mutant**
+For a tumor's driver mutation, MutationRx docks a 62-drug panel (27 curated plus a 35-drug unbiased
+approved-drug library) against the **wild-type and mutant**
 structure, rescores with gnina, and bootstraps a **95% credible interval** on each wild-type→mutant
 shift. Then **Claude reviews every hit for mechanistic plausibility** — separating believable leads
 from coincidental docking scores (a beta-blocker "binding" EGFR is almost certainly an artifact; a
@@ -74,7 +75,7 @@ the week" bar.
 > it scores drugs that don't really bind, and a researcher can't tell signal from artifact.
 >
 > MutationRx is a resistance-aware triage instrument. For a tumor's driver mutation it docks a panel of
-> 27 approved drugs against the wild-type and mutant protein and quantifies each shift with credible
+> 62 approved drugs against the wild-type and mutant protein and quantifies each shift with credible
 > intervals from replicate runs — then Claude reviews every hit for mechanistic plausibility,
 > separating believable leads from coincidental docking artifacts. It runs on real, de-identified
 > TCGA patient tumors, reproduces known EGFR-resistance biology (osimertinib holds against T790M) on

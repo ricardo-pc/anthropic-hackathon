@@ -1,6 +1,6 @@
 # New genotypes to dock (overnight cluster run)
 
-Each new genotype only needs its **mutant** structure docked against the 27-drug panel — the wild-type
+Each new genotype only needs its **mutant** structure docked against the drug panel — the wild-type
 references (`3POZ` for EGFR, `8FMI` for KRAS) are already docked and cached, so you reuse them. Model
 each point mutant from its wild-type with `cluster/model_mutant.py`, then run the existing sweep +
 replicate pipeline (`cluster/README.md`). Ordered by demo value.
@@ -22,7 +22,7 @@ python cluster/model_mutant.py data/structures/prepared/3POZ_receptor.pdb C797S 
        data/structures/prepared/EGFR_C797S_receptor.pdb
 # (triple mutant: model from 5UGC instead of 3POZ)
 
-# 2. dock the 27-drug panel against the new mutant, N replicates, gnina --minimize rescore
+# 2. dock the drug panel against the new mutant, N replicates, gnina --minimize rescore
 #    — add the new pdb id to the sweep CSV and run the existing overnight pipeline
 sbatch cluster/overnight.sbatch        # see cluster/README.md; harvest gnina_scores_replicates rows
 

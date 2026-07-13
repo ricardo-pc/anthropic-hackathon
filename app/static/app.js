@@ -204,7 +204,7 @@ function showHero() {
         <div class="hero-left">
           <span class="eyebrow">Mutation-aware drug-repurposing triage</span>
           <h1>When a tumor mutates, its drugs stop working. Which one do you try next?</h1>
-          <p class="lede">MutationRx docks 27 approved drugs against the mutant protein, then has Claude separate
+          <p class="lede">MutationRx docks 62 approved drugs against the mutant protein, then has Claude separate
             the real leads from docking noise. First-pass triage, before the bench.</p>
           <div class="hero-cta">
             <div class="cta-label">Start with a real patient tumor</div>
@@ -326,10 +326,12 @@ function showMethodology() {
         not an arbitrary alignment. A point mutant with no crystal structure (e.g. EGFR C797S) is <b>modeled</b>
         by side-chain substitution and labeled as lower-confidence.</p></div>
 
-      <div class="msec"><h3><span class="mn">2</span> A panel of 27 approved drugs</h3>
-        <p>Targeted EGFR/KRAS inhibitors, multi-kinase inhibitors, and non-oncology drugs as repurposing
-        candidates. Canonical SMILES from PubChem, prepared with RDKit. The same panel is docked against every
-        structure, so results are directly comparable across genotypes.</p></div>
+      <div class="msec"><h3><span class="mn">2</span> A panel of 62 approved drugs</h3>
+        <p>27 are curated with a rationale: targeted EGFR/KRAS inhibitors, multi-kinase inhibitors, and
+        non-oncology drugs as repurposing candidates. The other 35 come from an unbiased approved-drug library,
+        a deliberate negative control that lets the tool show it discriminates rather than saying yes to
+        everything. Canonical SMILES from PubChem / ChEMBL, prepared with RDKit. The same panel is docked against
+        every structure, so results are directly comparable across genotypes.</p></div>
 
       <div class="msec"><h3><span class="mn">3</span> Docking, then an honest rescore</h3>
         <p>DiffDock (a diffusion model for blind docking) generates a binding pose for each drug against each
