@@ -72,4 +72,3 @@ real TCGA tumor — all in **[docs/usage.md](docs/usage.md)**. Or just open the
 - **Data sources:** TCGA Lung Adenocarcinoma via the open-access cBioPortal API (PanCancer Atlas 2018),
   de-identified somatic calls only — never controlled-access data. Structures: RCSB PDB. Drug
   chemistry: PubChem / ChEMBL + RDKit.
-- **Prior art:** RepoRx (Molecule McBob). This is a clean-room rebuild — no carried-over code.
