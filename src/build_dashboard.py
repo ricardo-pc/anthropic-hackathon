@@ -124,6 +124,10 @@ TEMPLATE = r"""<!doctype html>
     --c-weakened:#e66767; --c-robust:#12b312; --c-improved:#3987e5; --c-nonbinder:#8f8d86; --chip:#26261f;
     --tint-w:rgba(230,103,103,.09); --tint-r:rgba(18,179,18,.08); --tint-i:rgba(57,135,229,.09); --tint-n:rgba(143,141,134,.08);
   }
+  :root{--amber:#c98a12; --amber-tint:rgba(201,138,18,.12)}
+  @media (prefers-color-scheme:dark){:root{--amber:#e0a531; --amber-tint:rgba(224,165,49,.15)}}
+  :root[data-theme=light]{--amber:#c98a12; --amber-tint:rgba(201,138,18,.12)}
+  :root[data-theme=dark]{--amber:#e0a531; --amber-tint:rgba(224,165,49,.15)}
   *{box-sizing:border-box}
   body{margin:0;background:var(--plane);color:var(--ink);
     font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;
@@ -164,13 +168,32 @@ TEMPLATE = r"""<!doctype html>
   .verdict-line{font-size:15px;color:var(--ink2);margin:0 0 16px;max-width:74ch}
   .verdict-line b{color:var(--ink)}
   .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-  .tile{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden}
-  .tile:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
-  .tile.w:before{background:var(--c-weakened)} .tile.r:before{background:var(--c-robust)} .tile.h:before{background:var(--accent)}
-  .tile .n{font-size:34px;font-weight:750;letter-spacing:-0.02em;line-height:1}
-  .tile .k{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:2px 0 6px}
+  .tile{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 17px;position:relative;
+    display:block;width:100%;text-align:left;font:inherit;cursor:pointer;transition:border-color .14s,box-shadow .14s}
+  .tile:hover{box-shadow:0 6px 20px rgba(0,0,0,.10)}
+  .tile.w{background:linear-gradient(var(--tint-w),var(--tint-w)),var(--card);border-color:color-mix(in srgb,var(--c-weakened) 24%,var(--border))}
+  .tile.r{background:linear-gradient(var(--tint-r),var(--tint-r)),var(--card);border-color:color-mix(in srgb,var(--c-robust) 24%,var(--border))}
+  .tile.h{background:linear-gradient(var(--tint-i),var(--tint-i)),var(--card);border:2px solid color-mix(in srgb,var(--accent) 55%,var(--border));padding:14px 16px}
+  .tile.w:hover{border-color:color-mix(in srgb,var(--c-weakened) 50%,var(--border))}
+  .tile.r:hover{border-color:color-mix(in srgb,var(--c-robust) 50%,var(--border))}
+  .tile.h:hover{border-color:var(--accent)}
+  .tile .th{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .tile .tic{flex:none;width:27px;height:27px;border-radius:8px;display:grid;place-items:center;background:var(--card);border:1px solid var(--border)}
+  .tile .tic svg{width:16px;height:16px}
+  .tile.w .tic{color:var(--c-weakened)} .tile.r .tic{color:var(--c-robust)} .tile.h .tic{color:var(--accent)}
+  .tile .k{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
   .tile.w .k{color:var(--c-weakened)} .tile.r .k{color:var(--c-robust)} .tile.h .k{color:var(--accent)}
-  .tile .names{font-size:12.5px;color:var(--ink2);line-height:1.4}
+  .tile .hbadge{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;
+    color:var(--accent);background:var(--card);border:1px solid color-mix(in srgb,var(--accent) 40%,var(--border));border-radius:20px;padding:3px 8px 3px 6px}
+  .tile .hbadge svg{width:11px;height:11px}
+  .tile .tn{display:flex;align-items:baseline;gap:6px}
+  .tile .n{font-size:32px;font-weight:750;letter-spacing:-0.02em;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .tile .unit{font-size:12px;color:var(--ink2)}
+  .tile .tsub{font-size:12px;color:var(--ink2);margin:3px 0 11px;line-height:1.4}
+  .tile .tchips{display:flex;flex-wrap:wrap;gap:5px}
+  .tile .tchip{font-size:11px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--ink2);white-space:nowrap}
+  .tile .tchip.more{border:none;background:none;color:var(--muted);padding:2px 2px}
+  .tile .tchip-none{font-size:12px;color:var(--muted)}
 
   /* badges */
   .badges{display:flex;flex-direction:column;gap:10px}
@@ -180,14 +203,19 @@ TEMPLATE = r"""<!doctype html>
     font-size:13px;font-weight:800;color:#fff;margin-top:1px}
   .badge.valid .ic{background:var(--c-robust)} .badge.real .ic{background:var(--accent)}
   .badge.caveat .ic{background:var(--c-nonbinder)}
+  .badge.valid{background:linear-gradient(var(--tint-r),var(--tint-r)),var(--card)}
+  .badge.real{background:linear-gradient(var(--tint-i),var(--tint-i)),var(--card)}
+  .badge.caveat{background:color-mix(in srgb,var(--c-nonbinder) 8%,var(--card))}
   .badge b{color:var(--ink)}
   .badge .bt{color:var(--ink2)}
 
   /* chart */
   .axis-ends{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);padding:0 2px 6px}
-  .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--ink2);padding:2px 2px 10px}
+  .legend{display:flex;flex-wrap:wrap;align-items:center;gap:14px;font-size:12.5px;color:var(--ink2);padding:2px 2px 10px}
   .legend .it{display:flex;align-items:center;gap:6px}
   .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .sw.sw-band{background:var(--chip);border-left:1px dashed var(--axis);border-right:1px dashed var(--axis);border-radius:0}
+  .ev-axis{margin-left:auto;color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums}
   .axkey{color:var(--muted)}
   .bucket{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:6px 16px 10px;margin-bottom:14px;border-left-width:4px;border-left-style:solid}
   .bucket.b-weakened{border-left-color:var(--c-weakened);background:linear-gradient(var(--tint-w),var(--tint-w)),var(--card)}
@@ -198,22 +226,29 @@ TEMPLATE = r"""<!doctype html>
   .bhead .desc{font-weight:400;color:var(--ink2);font-size:13px}
   .bhead .ct{margin-left:auto;color:var(--muted);font-size:12px;font-weight:600}
   table.rows{width:100%;border-collapse:collapse}
-  .rows td{padding:9px 6px;border-top:1px solid var(--grid);vertical-align:middle}
+  .rows td{padding:0 6px;border-top:1px solid var(--grid);vertical-align:middle}
   .rows tr:first-child td{border-top:none}
+  .bucket.flash{animation:bflash 1.2s ease-out}
+  @keyframes bflash{0%,100%{box-shadow:none}22%{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}}
   .dname{font-weight:650;font-size:14px;white-space:nowrap}
   .bench{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
     color:var(--c-robust);border:1px solid var(--c-robust);border-radius:5px;padding:0 4px;margin-left:6px;vertical-align:1px}
   .cat{display:block;color:var(--muted);font-size:11px;font-weight:400;margin-top:1px}
-  .track{position:relative;height:30px;min-width:190px}
-  .zero{position:absolute;top:4px;bottom:4px;width:1px;background:var(--axis);opacity:.6}
-  .ci{position:absolute;top:12.5px;height:5px;border-radius:3px;opacity:.3}
-  .dot{position:absolute;top:9px;width:10px;height:10px;border-radius:50%;margin-left:-5px;
-    border:2px solid var(--card);box-shadow:0 1px 2px rgba(15,21,25,.2);z-index:1}
-  .chev{position:absolute;top:6px;font-size:17px;line-height:1;font-weight:800}
+  .track{position:relative;height:38px;min-width:190px}
+  .band{position:absolute;top:0;bottom:0;background:var(--chip);border-left:1px dashed var(--axis);border-right:1px dashed var(--axis)}
+  .zero{position:absolute;top:0;bottom:0;width:1.5px;margin-left:-.75px;background:var(--axis)}
+  .ci{position:absolute;top:50%;height:5px;border-radius:3px;opacity:.32;transform:translateY(-50%)}
+  .dot{position:absolute;top:50%;width:10px;height:10px;border-radius:50%;margin-left:-5px;transform:translateY(-50%);
+    border:2px solid var(--card);box-shadow:0 1px 2px rgba(15,21,25,.2);z-index:2}
+  .chev{position:absolute;top:50%;transform:translateY(-50%);font-size:17px;line-height:1;font-weight:800;z-index:2}
   .num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;font-size:13.5px;font-weight:600}
   .ci-txt{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:12px;white-space:nowrap}
-  .conf{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
-  .conf.low{color:var(--c-weakened)} .conf.medium{color:var(--muted)} .conf.high{color:var(--ink2)}
+  .conf-cell{width:64px;text-align:right;white-space:nowrap}
+  .conf-ok{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--axis)}
+  .conf-flag{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.04em;color:var(--amber);background:var(--amber-tint);border-radius:20px;padding:2px 7px 2px 5px}
+  .conf-flag svg{width:11px;height:11px}
+  .conf-flag.low{color:var(--c-weakened);background:color-mix(in srgb,var(--c-weakened) 12%,transparent)}
 
   /* claude */
   .claude{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
@@ -300,11 +335,10 @@ TEMPLATE = r"""<!doctype html>
       <span class="it"><span class="sw" style="background:var(--c-weakened)"></span>Weakened</span>
       <span class="it"><span class="sw" style="background:var(--c-robust)"></span>Robust</span>
       <span class="it"><span class="sw" style="background:var(--c-improved)"></span>Improved</span>
-      <span class="it"><span class="sw" style="background:var(--c-nonbinder)"></span>Non-binder / unreliable</span>
-      <span class="it axkey">&#9679; = &Delta; (mutant&minus;WT) &nbsp; &#124;&mdash;&#124; = 95% CI &nbsp; dashed = &plusmn;1 kcal/mol "matters" line</span>
+      <span class="it"><span class="sw" style="background:var(--c-nonbinder)"></span>Non-binder</span>
+      <span class="it"><span class="sw sw-band"></span>within &plusmn;1 kcal/mol &mdash; negligible</span>
+      <span class="ev-axis">&larr; binds better&nbsp;&middot;&nbsp;0 = no change&nbsp;&middot;&nbsp;worse (resistance) &rarr;</span>
     </div>
-    <div class="axis-ends"><span>&larr; binds better on the mutant</span>
-      <span>0 = no change</span><span>binds worse (resistance) &rarr;</span></div>
     <div id="chart"></div>
   </section>
 
@@ -352,6 +386,14 @@ const BMETA = {
 };
 const xPct = v => (Math.max(DMIN,Math.min(DMAX,v)) - DMIN)/(DMAX-DMIN)*100;
 const esc = s => String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const CATNAME={egfr_family:"EGFR family",kras_family:"KRAS family",known_answer:"known answer",multi_kinase:"multi-kinase",repurposing_candidate:"repurposing candidate",approved_library:"approved library",control:"control",tool_compound:"tool compound"};
+const catLabel=c=>CATNAME[c]||String(c||"").replace(/_/g," ");
+const drugChips=arr=>arr.length?arr.slice(0,3).map(d=>`<span class="tchip">${esc(d.drug)}</span>`).join("")+(arr.length>3?`<span class="tchip more">+${arr.length-3}</span>`:""):`<span class="tchip-none">none</span>`;
+const IC_BAN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>`;
+const IC_HOLD=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>`;
+const IC_FLASK=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3.5v6L5.2 17a2 2 0 0 0 1.7 3h10.2a2 2 0 0 0 1.7-3L14 9.5v-6"/><path d="M7.6 14h8.8"/></svg>`;
+const IC_WARN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg>`;
+const SPARK=`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.7 5.1a3 3 0 0 0 1.9 1.9L21 11l-5.4 1.9a3 3 0 0 0-1.9 1.9L12 21l-1.7-6.2a3 3 0 0 0-1.9-1.9L3 11l5.4-1.9a3 3 0 0 0 1.9-1.9z"/></svg>`;
 
 const $ = id => document.getElementById(id);
 const $cancer=$("cancer"), $mut=$("mutation"), $tcga=$("tcga"), $chart=$("chart"),
@@ -389,20 +431,23 @@ function loadTumor(t){
 function renderVerdict(T){
   const by=b=>T.drugs.filter(d=>d.bucket===b);
   const weak=by("weakened"), rob=by("robust"), imp=by("improved");
-  const leads=rob.filter(d=>d.category==="repurposing_candidate");
+  const leads=rob.filter(d=>d.category==="repurposing_candidate"||d.category==="approved_library");
   $("genotype").innerHTML = esc(T.mutation)+' <span class="tgt">· target '+esc(T.target)+'</span>';
   const nm = arr => arr.slice(0,3).map(d=>esc(d.drug)).join(", ")+(arr.length>3?", …":"");
   const tiles=[
-    {c:"w",n:weak.length,k:"Avoid",names: weak.length?nm(weak):"none"},
-    {c:"r",n:rob.length, k:"Still binds",names: rob.length?nm(rob):"none"},
-    {c:"h",n:leads.length,k:"To review",names: leads.length?nm(leads):"none"},
+    {c:"w",focus:"weakened",ic:IC_BAN,k:"Avoid",n:weak.length,unit:"drug"+(weak.length!=1?"s":""),sub:"lose their grip on the mutant",arr:weak,badge:""},
+    {c:"r",focus:"robust",ic:IC_HOLD,k:"Still binds",n:rob.length,unit:"drug"+(rob.length!=1?"s":""),sub:"hold their affinity on the mutant",arr:rob,badge:""},
+    {c:"h",focus:"robust",ic:IC_FLASK,k:"To review",n:leads.length,unit:"lead"+(leads.length!=1?"s":""),sub:"worth a bench test, not the bin",arr:leads,badge:`<span class="hbadge">${SPARK}Claude</span>`},
   ];
   $("tiles").innerHTML = tiles.map(t=>
-    `<div class="tile ${t.c}"><div class="n">${t.n}</div><div class="k">${t.k}</div>`+
-    `<div class="names">${t.names}</div></div>`).join("");
+    `<button type="button" class="tile ${t.c}" data-focus="${t.focus}">`+
+    `<div class="th"><span class="tic">${t.ic}</span><span class="k">${t.k}</span>${t.badge}</div>`+
+    `<div class="tn"><span class="n">${t.n}</span><span class="unit">${t.unit}</span></div>`+
+    `<div class="tsub">${t.sub}</div><div class="tchips">${drugChips(t.arr)}</div></button>`).join("");
+  $("tiles").querySelectorAll(".tile[data-focus]").forEach(el=>el.onclick=()=>focusBucket(el.dataset.focus));
   let line=`Docking flags <b>${weak.length}</b> drug${weak.length!=1?"s":""} that lose grip on this mutation `+
     `and <b>${rob.length}</b> that hold — but a robust docking score isn't automatically a real hit. `;
-  if(leads.length) line+=`<b>${leads.length}</b> are approved non-oncology drugs `+
+  if(leads.length) line+=`<b>${leads.length}</b> are approved repurposing candidates `+
     `(${nm(leads)}); the mechanistic review below weighs which are believable and which are likely artifacts.`;
   $("verdictLine").innerHTML=line;
 }
@@ -435,9 +480,20 @@ function ciBar(r){
   if(r.delta>DMAX) over=`<span class="chev" style="left:calc(100% - 11px);color:${c}">&rsaquo;</span>`;
   if(r.delta<DMIN) over=`<span class="chev" style="left:2px;color:${c}">&lsaquo;</span>`;
   return `<div class="track">
+    <span class="band" style="left:${t1}%;width:${t2-t1}%"></span>
     <span class="zero" style="left:${z}%"></span>
     <span class="ci" style="left:${lo}%;width:${Math.max(hi-lo,0.7)}%;background:${c}"></span>
     <span class="dot" style="left:${d}%;background:${c}"></span>${over}</div>`;
+}
+function confCell(r){
+  if(r.confidence==="high") return `<td class="conf-cell"><span class="conf-ok" aria-label="high confidence"></span></td>`;
+  return `<td class="conf-cell"><span class="conf-flag ${r.confidence}">${IC_WARN}${r.confidence}</span></td>`;
+}
+function focusBucket(key){
+  const el=document.querySelector(".bucket.b-"+key);
+  if(!el) return;
+  el.scrollIntoView({behavior:"smooth",block:"center"});
+  el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
 }
 function renderChart(T){
   let html="";
@@ -452,11 +508,11 @@ function renderChart(T){
       const dsign=(r.delta>=0?"+":"")+r.delta.toFixed(2);
       const bench = r.category==="known_answer" ? '<span class="bench" title="clinical benchmark drug">benchmark</span>' : "";
       html+=`<tr data-tip="<b>${esc(r.drug)}</b>: ${esc(r.reason)}.<br>WT ${r.affinity_wt}, mutant ${r.affinity_mut} kcal/mol · &Delta; ${dsign} [95% CI ${r.ci95[0].toFixed(2)}, ${r.ci95[1].toFixed(2)}] · ${r.confidence} confidence.">`+
-        `<td style="width:150px"><span class="dname">${esc(r.drug)}${bench}</span><span class="cat">${esc(r.category)}</span></td>`+
+        `<td style="width:150px"><span class="dname">${esc(r.drug)}${bench}</span><span class="cat">${esc(catLabel(r.category))}</span></td>`+
         `<td>${ciBar(r)}</td>`+
-        `<td class="num" style="width:56px">${dsign}</td>`+
+        `<td class="num" style="width:56px;color:var(${BMETA[r.bucket].cvar})">${dsign}</td>`+
         `<td class="ci-txt" style="width:98px">[${r.ci95[0].toFixed(2)}, ${r.ci95[1].toFixed(2)}]</td>`+
-        `<td class="conf ${r.confidence} num" style="width:58px">${r.confidence}</td></tr>`;
+        `${confCell(r)}</tr>`;
     }
     html+=`</tbody></table></div>`;
   }

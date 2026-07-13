@@ -7,7 +7,17 @@ const BMETA = {
   "improved":  {label:"Improved",   desc:"binds better on the mutant (rare)",        cvar:"--c-improved"},
   "non-binder":{label:"Non-binder", desc:"no binding either state, or QC-flagged",   cvar:"--c-nonbinder"},
 };
+const CATNAME = {
+  egfr_family:"EGFR family", kras_family:"KRAS family", known_answer:"known answer",
+  multi_kinase:"multi-kinase", repurposing_candidate:"repurposing candidate",
+  approved_library:"approved library", control:"control", tool_compound:"tool compound",
+};
+const catLabel = c => CATNAME[c] || String(c || "").replace(/_/g, " ");
 const esc = s => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const drugChips = arr => arr.length
+  ? arr.slice(0, 3).map(d => `<span class="tchip">${esc(d.drug)}</span>`).join("")
+      + (arr.length > 3 ? `<span class="tchip more">+${arr.length - 3}</span>` : "")
+  : `<span class="tchip-none">none</span>`;
 const xPct = v => (Math.max(DMIN, Math.min(DMAX, v)) - DMIN) / (DMAX - DMIN) * 100;
 const $ = id => document.getElementById(id);
 
@@ -27,6 +37,11 @@ let lastReq = null, lastDisplay = null;   // remembered so we can re-run after a
 const ATOM = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="1.6" fill="currentColor"/><ellipse cx="12" cy="12" rx="10" ry="4.3"/><ellipse cx="12" cy="12" rx="10" ry="4.3" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.3" transform="rotate(120 12 12)"/></svg>`;
 const SPARK = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.7 5.1a3 3 0 0 0 1.9 1.9L21 11l-5.4 1.9a3 3 0 0 0-1.9 1.9L12 21l-1.7-6.2a3 3 0 0 0-1.9-1.9L3 11l5.4-1.9a3 3 0 0 0 1.9-1.9z"/></svg>`;
 const CHIP = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/><path d="M9.5 2v3M14.5 2v3M9.5 19v3M14.5 19v3M2 9.5h3M2 14.5h3M19 9.5h3M19 14.5h3"/></svg>`;
+// verdict-tile glyphs: stop / keep / investigate — the three triage actions
+const IC_BAN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>`;
+const IC_HOLD = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>`;
+const IC_FLASK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3.5v6L5.2 17a2 2 0 0 0 1.7 3h10.2a2 2 0 0 0 1.7-3L14 9.5v-6"/><path d="M7.6 14h8.8"/></svg>`;
+const IC_WARN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg>`;
 
 // ---------------- init ----------------
 (async function init() {
@@ -432,10 +447,10 @@ function renderResult(r) {
 
   const by = b => r.drugs.filter(d => d.bucket === b);
   const weak = by("weakened"), rob = by("robust"), imp = by("improved");
-  const leads = rob.filter(d => d.category === "repurposing_candidate");
+  const leads = rob.filter(d => d.category === "repurposing_candidate" || d.category === "approved_library");
   const nm = a => a.slice(0, 3).map(d => esc(d.drug)).join(", ") + (a.length > 3 ? ", …" : "");
   let line = `Docking flags <b>${weak.length}</b> drug${weak.length!=1?"s":""} that lose grip on ${esc(r.label)} and <b>${rob.length}</b> that hold, but a robust docking score isn't automatically a real hit.`;
-  if (leads.length) line += ` <b>${leads.length}</b> are approved non-oncology drugs (${nm(leads)}); Claude's review below weighs which are mechanistically believable and which are likely artifacts.`;
+  if (leads.length) line += ` <b>${leads.length}</b> are approved repurposing candidates (${nm(leads)}); Claude's review below weighs which are mechanistically believable and which are likely artifacts.`;
 
   const badges = [];
   if (r.tumor) badges.push(`<div class="badge real"><span class="ic">●</span><span class="bt"><b>Real patient tumor.</b> ${esc(r.tumor.sample_id)}, a de-identified TCGA lung-adenocarcinoma sample with ${r.tumor.n_mutations} somatic mutations, never seen by the tool. In scope: <b>${esc(r.tumor.in_scope_variants.join(", "))}</b>; most of the tumor is out of scope. Source: cBioPortal, TCGA PanCancer Atlas 2018.</span></div>`);
@@ -450,9 +465,24 @@ function renderResult(r) {
       <div class="card pad">
         <div class="verdict-line">${line}</div>
         <div class="tiles">
-          <div class="tile w"><div class="n">${weak.length}</div><div class="k">Avoid</div><div class="names">${weak.length?nm(weak):"none"}</div></div>
-          <div class="tile r"><div class="n">${rob.length}</div><div class="k">Still binds</div><div class="names">${rob.length?nm(rob):"none"}</div></div>
-          <div class="tile h"><div class="n">${leads.length}</div><div class="k">To review</div><div class="names">${leads.length?nm(leads):"none"}</div></div>
+          <button type="button" class="tile w" data-focus="weakened">
+            <div class="th"><span class="tic">${IC_BAN}</span><span class="k">Avoid</span></div>
+            <div class="tn"><span class="n">${weak.length}</span><span class="unit">drug${weak.length!=1?"s":""}</span></div>
+            <div class="tsub">lose their grip on the mutant</div>
+            <div class="tchips">${drugChips(weak)}</div>
+          </button>
+          <button type="button" class="tile r" data-focus="robust">
+            <div class="th"><span class="tic">${IC_HOLD}</span><span class="k">Still binds</span></div>
+            <div class="tn"><span class="n">${rob.length}</span><span class="unit">drug${rob.length!=1?"s":""}</span></div>
+            <div class="tsub">hold their affinity on the mutant</div>
+            <div class="tchips">${drugChips(rob)}</div>
+          </button>
+          <button type="button" class="tile h" data-focus="robust">
+            <div class="th"><span class="tic">${IC_FLASK}</span><span class="k">To review</span><span class="hbadge">${SPARK}Claude</span></div>
+            <div class="tn"><span class="n">${leads.length}</span><span class="unit">lead${leads.length!=1?"s":""}</span></div>
+            <div class="tsub">worth a bench test, not the bin</div>
+            <div class="tchips">${drugChips(leads)}</div>
+          </button>
         </div>
       </div>
       ${badges.length?`<div class="card">${badges.join("")}</div>`:""}
@@ -464,8 +494,19 @@ function renderResult(r) {
       <div class="foot-note">Δ = mutant minus wild-type affinity (kcal/mol); more negative binds stronger. A credible interval that excludes zero is a confident call; one that straddles zero is not. Docking affinity is a proxy, not a measured K<sub>d</sub> or clinical efficacy. This is pre-wet-lab triage, not treatment advice.</div>
     </div>`;
   attachTips();
+  document.querySelectorAll(".tile[data-focus]").forEach(t => t.onclick = () => focusBucket(t.dataset.focus));
   const sb = $("structBtn");
   if (sb) sb.onclick = () => openStructure(sb.dataset.label);
+}
+
+// clicking a verdict tile opens Full evidence and pulls the matching bucket into view
+function focusBucket(key) {
+  const det = document.querySelector("details.disclose");
+  if (det && !det.open) det.open = true;
+  const el = document.querySelector(".bucket.b-" + key);
+  if (!el) return;
+  el.scrollIntoView({behavior: "smooth", block: "center"});
+  el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
 }
 
 // ---------------- 3D structure viewer (non-blocking modal) ----------------
@@ -519,8 +560,9 @@ function evidence(r) {
     <span class="it"><span class="sw" style="background:var(--c-weakened)"></span>Weakened</span>
     <span class="it"><span class="sw" style="background:var(--c-robust)"></span>Robust</span>
     <span class="it"><span class="sw" style="background:var(--c-improved)"></span>Improved</span>
-    <span class="it"><span class="sw" style="background:var(--c-nonbinder)"></span>Non-binder</span></div>
-    <div class="axis-ends"><span>← binds better on the mutant</span><span>0 = no change</span><span>binds worse (resistance) →</span></div>`;
+    <span class="it"><span class="sw" style="background:var(--c-nonbinder)"></span>Non-binder</span>
+    <span class="it"><span class="sw sw-band"></span>within &plusmn;1 kcal/mol &mdash; negligible</span>
+    <span class="ev-axis">&larr; binds better&nbsp;&middot;&nbsp;0 = no change&nbsp;&middot;&nbsp;worse (resistance) &rarr;</span></div>`;
   let html = legend;
   for (const bucket of ORDER) {
     const rows = r.drugs.filter(d => d.bucket === bucket);
@@ -530,7 +572,7 @@ function evidence(r) {
     for (const d of rows) {
       const ds = (d.delta>=0?"+":"") + d.delta.toFixed(2);
       const bench = d.category === "known_answer" ? `<span class="bench">benchmark</span>` : "";
-      html += `<tr data-tip="<b>${esc(d.drug)}</b>: ${esc(d.reason)}.<br>WT ${d.affinity_wt}, mutant ${d.affinity_mut} kcal/mol · Δ ${ds} [95% CI ${d.ci95[0].toFixed(2)}, ${d.ci95[1].toFixed(2)}] · ${d.confidence} confidence."><td style="width:150px"><span class="dname">${esc(d.drug)}${bench}</span><span class="cat">${esc(d.category)}</span></td><td>${ciBar(d)}</td><td class="num" style="width:54px">${ds}</td><td class="ci-txt" style="width:96px">[${d.ci95[0].toFixed(2)}, ${d.ci95[1].toFixed(2)}]</td><td class="conf ${d.confidence} num" style="width:56px">${d.confidence}</td></tr>`;
+      html += `<tr data-tip="<b>${esc(d.drug)}</b>: ${esc(d.reason)}.<br>WT ${d.affinity_wt}, mutant ${d.affinity_mut} kcal/mol · Δ ${ds} [95% CI ${d.ci95[0].toFixed(2)}, ${d.ci95[1].toFixed(2)}] · ${d.confidence} confidence."><td style="width:150px"><span class="dname">${esc(d.drug)}${bench}</span><span class="cat">${esc(catLabel(d.category))}</span></td><td>${ciBar(d)}</td><td class="num" style="width:54px;color:var(${BMETA[d.bucket].cvar})">${ds}</td><td class="ci-txt" style="width:96px">[${d.ci95[0].toFixed(2)}, ${d.ci95[1].toFixed(2)}]</td>${confCell(d)}</tr>`;
     }
     html += `</tbody></table></div>`;
   }
@@ -539,12 +581,19 @@ function evidence(r) {
 function ciBar(d) {
   const c = `var(${BMETA[d.bucket].cvar})`;
   const lo = xPct(d.ci95[0]), hi = xPct(d.ci95[1]), dd = xPct(d.delta), z = xPct(0);
+  const nlo = xPct(-DMEAN), nhi = xPct(DMEAN);   // ±1 kcal/mol "negligible" band, shared across every row
   let over = "";
   if (d.delta > DMAX) over = `<span class="chev-o" style="left:calc(100% - 11px);color:${c}">›</span>`;
   if (d.delta < DMIN) over = `<span class="chev-o" style="left:2px;color:${c}">‹</span>`;
-  return `<div class="track"><span class="zero" style="left:${z}%"></span>`
+  return `<div class="track"><span class="band" style="left:${nlo}%;width:${nhi - nlo}%"></span>`
+    + `<span class="zero" style="left:${z}%"></span>`
     + `<span class="ci" style="left:${lo}%;width:${Math.max(hi - lo, 0.7)}%;background:${c}"></span>`
     + `<span class="dot" style="left:${dd}%;background:${c}"></span>${over}</div>`;
+}
+// confidence, inverted: high is the quiet default (a small neutral dot); only medium/low earns a visible flag
+function confCell(d) {
+  if (d.confidence === "high") return `<td class="conf-cell"><span class="conf-ok" aria-label="high confidence"></span></td>`;
+  return `<td class="conf-cell"><span class="conf-flag ${esc(d.confidence)}">${IC_WARN}${esc(d.confidence)}</span></td>`;
 }
 
 // ---------------- gpu gate / errors ----------------
